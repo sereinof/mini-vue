@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <!-- <script src="../../../node_modules/@vue/reactivity/dist/reactivity.global.js"></script> -->
+    <script src="./reactivity.global.js"></script>
+    <script>
+        let waiting = false;
+        const { effect, reactive } = VueReactivity;
+        let obj = { name: 'zf', age: 13, address: { num: 13 } };
+        const state = reactive(obj);
+       
+       let runner =  effect(() => {
+           // state.age = Math.random();
+            app.innerHTML = state.name + '今年' + state.age + '岁了';
+        },{
+            scheduler(){
+                console.log('run');
+                if(!waiting){
+                    waiting =true;
+                setTimeout(()=>{
+                  
+                        waiting =false;//这个变量也是使用的恰到好处，防止设置多个setTomeout
+                        runner();
+
+                    
+ 
+  
+                },1000)}//此处巧妙的利用了事件循环的机制来避免多次修改值导致的浪费渲染
+            }
+        })
+        console.log(state.address);
+       state.age = 100;
+       state.age = 200;
+       state.age = 300;
+       state.age = 400;
+       state.age = 500;
+
+    </script>
+</body>
+
+</html>

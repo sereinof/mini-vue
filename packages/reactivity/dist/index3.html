@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <!-- <script src="../../../node_modules/@vue/reactivity/dist/reactivity.global.js"></script> -->
+    <script src="./reactivity.global.js"></script>
+    <script>
+        const { effect, reactive, computed } = VueReactivity;
+        let obj = { flag: true, name: 'zf', age: 13, address: { num: 13 } };
+        const state = reactive(obj);
+    console.log(state.name,state.age)
+        const fullName = computed(() => {
+            console.log('runner')
+            return state.name + state.age;
+        })
+        console.log(fullName)
+        effect(() => {
+            app.innerHTML = fullName.value
+        })
+ 
+
+        setTimeout(()=>{
+            debugger
+           // fullName.value = 'zhouyuqing';这种方法是被禁止的，不会起作用，好像是脏值在起作用
+           state.name = "zhouyuqing"
+        },1000)
+    </script>
+</body>
+
+</html>

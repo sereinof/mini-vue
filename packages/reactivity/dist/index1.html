@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <!-- <script src="../../../node_modules/@vue/reactivity/dist/reactivity.global.js"></script> -->
+    <script src="./reactivity.global.js"></script>
+    <script>
+        const { effect, reactive } = VueReactivity;
+        let obj = { flag:true,name: 'zf', age: 13, address: { num: 13 } };
+        const state = reactive(obj);
+        effect(() => {
+            //期望每次执行effect的时候都可以清理一遍依赖，重新收集？
+console.log('render')
+            app.innerHTML = state.flag? state.name + '今年'  + '岁了':state.age;
+        })
+        setTimeout(() => {
+            state.flag =false;
+            setTimeout(()=>{
+console.log('修改name 原则上不更新');
+state.name="jgirgr";
+            },1000)
+        }, 1000)
+    </script>
+</body>
+
+</html>
