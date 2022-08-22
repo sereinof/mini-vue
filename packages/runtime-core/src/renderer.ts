@@ -14,16 +14,17 @@ export function createRenderer(renderOptions) {
         createText: hostCreateText,
         patchProp: hostPatchprop,
     } = renderOptions;
-    const normalize = (child) => {
-        if (isString(child)) {
-            return createVnode(Text, null, child)
+    const normalize = (children,i) => {
+        if (isString(children[i])) {
+            let vnode =  createVnode(Text, null, children[i]);
+             children[i] = vnode;
         }
-        return child;
+        return children[i];
     }
 
     const mountChildren = (children, container) => {
         for (let i = 0; i < children.length; i++) {
-            let child = normalize(children[i]);
+            let child = normalize(children,i);//处理后要进行替换，否则children中存放的依旧是那个字符串
             patch(null, child, container);
         }
     }
@@ -80,7 +81,33 @@ const preShapeFlags = n1.shapeFlag;// 之前的
 const shapeFlag  = n2.shapeFlag;//之后的
 //比较两个儿子列表的差异了
 if(shapeFlag & ShapeFlags.TEXT_CHILDREN){
-    if(p)
+    if(preShapeFlags & ShapeFlags.ARRAY_CHILDREN){
+        //  之前是数组节点儿子，现在是文本节点儿子。需要将数组节点全部卸载
+        unmountChildren(c1);
+    }
+    if(c1!==c2){
+        //进到这里面说明两个儿子都是文本，且文本内容不一样、
+        hostSetElementText(c2,el);
+    }
+}else{
+    //进到这里面说明不是数组就是空了，新的孩子
+    if(preShapeFlags & ShapeFlags.ARRAY_CHILDREN){
+        if(shapeFlag & ShapeFlags.ARRAY_CHILDREN){
+            //这里面数组和数组相比，典型的diff算法
+
+        }else{
+            //现在不是数组，文本和空
+            unmountChildren(c1);
+        }
+    }else{
+        if(preShapeFlags & ShapeFlags.TEXT_CHILDREN){
+            hostSetElementText(el,'');
+        }
+        if(shapeFlag & ShapeFlags.ARRAY_CHILDREN){
+            mountChildren(c2,el);
+        }
+    }
+
 }
 }
 
@@ -89,7 +116,9 @@ if(shapeFlag & ShapeFlags.TEXT_CHILDREN){
         let oladProps = n1.props || {};
         let newProps = n2.props || {};
         patchProps(oladProps, newProps,el);//这里不是container而是el，找了好久，幸亏找出了不想computed一样
-       pathchChildren(n1,n2,el);
+      
+      debugger;
+        pathchChildren(n1,n2,el);
     }
 
     const processElement = (n1, n2, container) => {

@@ -79,15 +79,16 @@ var VueRuntimeDom = (() => {
       createText: hostCreateText,
       patchProp: hostPatchprop
     } = renderOptions2;
-    const normalize = (child) => {
-      if (isString(child)) {
-        return createVnode(Text, null, child);
+    const normalize = (children, i) => {
+      if (isString(children[i])) {
+        let vnode = createVnode(Text, null, children[i]);
+        children[i] = vnode;
       }
-      return child;
+      return children[i];
     };
     const mountChildren = (children, container) => {
       for (let i = 0; i < children.length; i++) {
-        let child = normalize(children[i]);
+        let child = normalize(children, i);
         patch(null, child, container);
       }
     };
@@ -135,12 +136,37 @@ var VueRuntimeDom = (() => {
     const pathchChildren = (n1, n2, el) => {
       const c1 = n1.children;
       const c2 = n2.children;
+      const preShapeFlags = n1.shapeFlag;
+      const shapeFlag = n2.shapeFlag;
+      if (shapeFlag & 8 /* TEXT_CHILDREN */) {
+        if (preShapeFlags & 16 /* ARRAY_CHILDREN */) {
+          unmountChildren(c1);
+        }
+        if (c1 !== c2) {
+          hostSetElementText(c2, el);
+        }
+      } else {
+        if (preShapeFlags & 16 /* ARRAY_CHILDREN */) {
+          if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
+          } else {
+            unmountChildren(c1);
+          }
+        } else {
+          if (preShapeFlags & 8 /* TEXT_CHILDREN */) {
+            hostSetElementText(el, "");
+          }
+          if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
+            mountChildren(c2, el);
+          }
+        }
+      }
     };
     const patchElement = (n1, n2, container) => {
       let el = n2.el = n1.el;
       let oladProps = n1.props || {};
       let newProps = n2.props || {};
       patchProps(oladProps, newProps, el);
+      debugger;
       pathchChildren(n1, n2, el);
     };
     const processElement = (n1, n2, container) => {
