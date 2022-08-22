@@ -15,6 +15,7 @@ class ComputedRefImpl {
             if (!this._dirty) {
                 debugger
                 this._dirty = true;
+                this.effect.run();//这里需要这一步
             }
         });
     }
