@@ -128,6 +128,15 @@ export function createRenderer(renderOptions) {
         //i和e1之间是要新增的部分
 
 
+        //优化完毕*************
+        //乱序对比
+        let s1 = i;
+        let s2 = i;
+   const kewToNewIndexMap = new Map();
+   for(let i =s2;i<=e2;i++){
+
+   }
+
     }
 
     const pathchChildren = (n1, n2, el) => {

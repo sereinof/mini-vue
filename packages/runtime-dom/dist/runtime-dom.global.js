@@ -1,4 +1,4 @@
-var VueRuntimeDOM = (() => {
+var VueRuntimeDom = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
   var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -174,6 +174,11 @@ var VueRuntimeDOM = (() => {
             i++;
           }
         }
+      }
+      let s1 = i;
+      let s2 = i;
+      const kewToNewIndexMap = /* @__PURE__ */ new Map();
+      for (let i2 = s2; i2 <= e2; i2++) {
       }
     };
     const pathchChildren = (n1, n2, el) => {
