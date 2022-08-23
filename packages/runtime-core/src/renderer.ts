@@ -27,7 +27,7 @@ export function createRenderer(renderOptions) {
             let child = normalize(children,i);//处理后要进行替换，否则children中存放的依旧是那个字符串
             patch(null, child, container);
         }
-    }
+    } 
 
     function mountElement(vnode, container) {
         let { type, props, children, shapeFlag } = vnode;
@@ -73,6 +73,37 @@ const unmountChildren = (children)=>{
     unmount(children[i]);
   }
 }
+const patchKeyedChildren = (c1,c2,el)=>{//比较两个儿子的差异
+    let i= 0;
+    let e1 = c1.length -1;
+    let  e2 = c2.length-1;
+//sync from start
+    while(i<=e1&& i<=2){//有任何一方停止循环则直接退出
+        const n1 = c1[i];
+        const n2  = c2[i];
+        //下面还是在特殊处理，处理掉一些能够少比较就少比较的情景
+        if(isSameVnode(n1,n2)){
+            patch(n1,n2,el);//这样做的是比较两个节点的属性和子节点
+        }else{
+           break; 
+        }
+
+    }
+    //sync from end
+    while(i<el && i<e2){
+        const n1 = c1[e1];
+        const n2 = c2[e1];
+        if(isSameVnode(n1,n2)){
+            patch(n1,n2,el);
+        }else{
+            break;
+        }
+        e1--;
+        e2--;
+    }
+
+}
+
 const pathchChildren = (n1,n2,el)=>{
 //刚刚说漏了，这里才是最精彩的部分
 const c1 =  n1.children;
@@ -94,6 +125,7 @@ if(shapeFlag & ShapeFlags.TEXT_CHILDREN){
     if(preShapeFlags & ShapeFlags.ARRAY_CHILDREN){
         if(shapeFlag & ShapeFlags.ARRAY_CHILDREN){
             //这里面数组和数组相比，典型的diff算法
+            patchKeyedChildren(c1,c2,el);//全量diff
 
         }else{
             //现在不是数组，文本和空

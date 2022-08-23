@@ -133,6 +133,31 @@ var VueRuntimeDom = (() => {
         unmount(children[i]);
       }
     };
+    const patchKeyedChildren = (c1, c2, el) => {
+      let i = 0;
+      let e1 = c1.length - 1;
+      let e2 = c2.length - 1;
+      while (i <= e1 && i <= 2) {
+        const n1 = c1[i];
+        const n2 = c2[i];
+        if (isSameVnode(n1, n2)) {
+          patch(n1, n2, el);
+        } else {
+          break;
+        }
+      }
+      while (i < el && i < e2) {
+        const n1 = c1[e1];
+        const n2 = c2[e1];
+        if (isSameVnode(n1, n2)) {
+          patch(n1, n2, el);
+        } else {
+          break;
+        }
+        e1--;
+        e2--;
+      }
+    };
     const pathchChildren = (n1, n2, el) => {
       const c1 = n1.children;
       const c2 = n2.children;
@@ -148,6 +173,7 @@ var VueRuntimeDom = (() => {
       } else {
         if (preShapeFlags & 16 /* ARRAY_CHILDREN */) {
           if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
+            patchKeyedChildren(c1, c2, el);
           } else {
             unmountChildren(c1);
           }
