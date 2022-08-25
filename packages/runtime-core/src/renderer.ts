@@ -132,12 +132,44 @@ export function createRenderer(renderOptions) {
         //乱序对比
         let s1 = i;
         let s2 = i;
-   const kewToNewIndexMap = new Map();
+   const keyToNewIndexMap = new Map();
    for(let i =s2;i<=e2;i++){
-
+  keyToNewIndexMap.set(c2[i].key,i);
    }
+  //循环老的元素，看一下新的里面有没有
+    //如果有需要比较差异，如果没有要添加到列表中
+    //老的有新的没有要删除
+    const  toBePatched = e2 -s2 +1;//新元素的总个数 
+    const newIndexToOldIndexMap = new Array(toBePatched).fill(0);//一个记录是否比对过的映射表
+    for(let i =s1;i<=e1;i++){
+        const oldChild = c1[i];//老的孩子
+        let newIndex = keyToNewIndexMap.get(oldChild.key);
+        //用老的孩子去新的里面找
+        if(newIndex==undefined){
+  unmount(oldChild);
+        }else{
+            //新的位置对应的老的位置，如果数组里放的值大于零，说明已经patch过了
+            newIndexToOldIndexMap[newIndex-s2] = i+1;
+            patch(oldChild,c2[newIndex],el);
+        }
+    }
+    //需要移动位置
+  for(let i = toBePatched -1;i>=0;i--){
+    let index = i +s2;
+    let current = c2[index];
+    let anchor = index +1 <c2.length?c2[index+1].el:null;
+    if(newIndexToOldIndexMap[i] ===0){//创建
+patch(null,current,el,anchor);
+    }else{//不是零， 说明是已经比对过属性和儿子的了
+        debugger;
+  hostInsert(current.el,el,anchor);
 
     }
+  }
+  //以上做法乱序中的元素都操作了一遍，这时候最长递增子序列就要登场了
+  //这个地方是vue2没有的哦
+    }
+  
 
     const pathchChildren = (n1, n2, el) => {
         //刚刚说漏了，这里才是最精彩的部分
