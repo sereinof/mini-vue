@@ -1,7 +1,8 @@
+import { reactive } from "@vue/reactivity";
 import { isString, ShapeFlags } from "@vue/shared";
 import { patchClass } from "packages/runtime-dom/src/modules/class"
 import { getSequence } from "./sequence";
-import { createVnode, isSameVnode, Text } from "./vnode";
+import { createVnode, Fragment, isSameVnode, Text } from "./vnode";
 
 export function createRenderer(renderOptions) {
     let {
@@ -142,8 +143,8 @@ export function createRenderer(renderOptions) {
         //老的有新的没有要删除
         const toBePatched = e2 - s2 + 1;//新元素的总个数 
         const newIndexToOldIndexMap = new Array(toBePatched).fill(0);//一个记录是否比对过的映射表
-       //获取最长递增子序列】
-       
+        //获取最长递增子序列】
+
         for (let i = s1; i <= e1; i++) {
             const oldChild = c1[i];//老的孩子
             let newIndex = keyToNewIndexMap.get(oldChild.key);
@@ -156,10 +157,10 @@ export function createRenderer(renderOptions) {
                 patch(oldChild, c2[newIndex], el);
             }
         }
-        let increment =  getSequence(newIndexToOldIndexMap);
+        let increment = getSequence(newIndexToOldIndexMap);
 
         //需要移动位置
-        let j =increment.length -1;
+        let j = increment.length - 1;
         for (let i = toBePatched - 1; i >= 0; i--) {
             let index = i + s2;
             let current = c2[index];
@@ -167,14 +168,14 @@ export function createRenderer(renderOptions) {
             if (newIndexToOldIndexMap[i] === 0) {//创建
                 patch(null, current, el, anchor);
             } else {//不是零， 说明是已经比对过属性和儿子的了
-                if(i != increment[j]){
+                if (i != increment[j]) {
                     hostInsert(current.el, el, anchor);
-                }else{
+                } else {
                     j--;
                     console.log('不做插入')
                 }
-                
-                
+
+
 
             }
         }
@@ -240,6 +241,31 @@ export function createRenderer(renderOptions) {
             patchElement(n1, n2, container)//这里估计是重头戏里面的重头戏了，就是元素比对
         }
     }
+    const processFragment = (n1, n2, container, anchor) => {
+        if (n1 == null) {
+            mountChildren(n2.children, container)
+        } else {
+            pathchChildren(n1, n2, container);//走了是两个数组情况的diff算法
+        }
+    }
+    const mountComponent = (vnode, container, anchor) => {
+        const { data = () => { }, render } = vnode.type;
+        const state = reactive(data());
+
+        const instance = {//组件的实例
+    state,
+    vnode,
+    subTree,
+        }
+    }
+
+    const processCommponent = (n1, n2, container, anchor) => {
+        if (n1 == null) {
+            mountComponent(n2, container, anchor)
+        } else {//组件更新靠的是props
+
+        }
+    }
 
     const patch = (n1, n2, container, anchor = null) => {//核心的patch方法
         if (n1 === n2) { return };
@@ -253,13 +279,19 @@ export function createRenderer(renderOptions) {
         const { type, shapeFlag } = n2;
         //初始化节点
         //后续还有组件的初次渲染，目前是元素的初始化渲染
+        debugger;
         switch (type) {
             case Text:
                 processText(n1, n2, container);
                 break;
+            case Fragment:
+                processFragment(n1, n2, container, anchor);
+                break;
             default:
                 if (shapeFlag & ShapeFlags.ELEMENT) {
                     processElement(n1, n2, container, anchor);
+                } else if (shapeFlag & ShapeFlags.COMPONEBT) {
+                    processCommponent(n1, n2, container, anchor)
                 }
         }
 

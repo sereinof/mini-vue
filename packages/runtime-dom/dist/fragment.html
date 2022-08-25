@@ -13,19 +13,6 @@
     <script src="./runtime-dom.global.js"></script>
     <script>
         let { createRenderer, h, render ,Text,Fragment} = VueRuntimeDOM;
-
-        const vueConponent = {//vue3兼容2的写法
-            //data就好像是reactive而render就像是effect
-            data(){
-                return {
-                    name:'zf',
-                    age:'13'
-                }
-            },
-            render(){
-                return h('p',`${thie.name}今年${this.age}`)
-            }
-        }
         render(h(Fragment, 
             [
            
