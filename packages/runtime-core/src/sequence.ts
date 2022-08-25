@@ -1,4 +1,4 @@
-function getSequence(arr){
+ export function getSequence(arr){
     const len = arr.length;
 
     const result = [0];

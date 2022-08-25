@@ -1,5 +1,6 @@
 import { isString, ShapeFlags } from "@vue/shared";
 import { patchClass } from "packages/runtime-dom/src/modules/class"
+import { getSequence } from "./sequence";
 import { createVnode, isSameVnode, Text } from "./vnode";
 
 export function createRenderer(renderOptions) {
@@ -29,11 +30,11 @@ export function createRenderer(renderOptions) {
         }
     }
 
-    function mountElement(vnode, container,anchor) {
+    function mountElement(vnode, container, anchor) {
         let { type, props, children, shapeFlag } = vnode;
         vnode.el = hostCreateElenment(type);//将真实元素挂在到这个虚拟节点上，后续用于复用节点
         let el = vnode.el;
-       
+
         if (props) {
             for (let key in props) {
                 hostPatchprop(el, key, null, props[key]);
@@ -44,7 +45,7 @@ export function createRenderer(renderOptions) {
         } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
             mountChildren(children, el);
         }
-        hostInsert(el, container,anchor);
+        hostInsert(el, container, anchor);
     }
     const processText = (n1, n2, container) => {
         if (n1 === null) {
@@ -110,21 +111,21 @@ export function createRenderer(renderOptions) {
             if (i <= e2) {
                 while (i <= e2) {
                     const nextPos = e2 + 1;
-                    const anchor = nextPos<c2.length?c2[nextPos].el: null; 
-                    patch(null, c2[i], el,anchor);//创建新节点扔到容器中
+                    const anchor = nextPos < c2.length ? c2[nextPos].el : null;
+                    patch(null, c2[i], el, anchor);//创建新节点扔到容器中
                     i++;
                 }
             }
-        }else if(i>e2){
-            if(i<=e1){
-                while(i<=e1){
+        } else if (i > e2) {
+            if (i <= e1) {
+                while (i <= e1) {
                     unmount(c1[i]);
                     i++
                 }
             }
         }
         //common sequence +unmount
-         //i要步e2大说明有卸载的
+        //i要步e2大说明有卸载的
         //i和e1之间是要新增的部分
 
 
@@ -132,44 +133,55 @@ export function createRenderer(renderOptions) {
         //乱序对比
         let s1 = i;
         let s2 = i;
-   const keyToNewIndexMap = new Map();
-   for(let i =s2;i<=e2;i++){
-  keyToNewIndexMap.set(c2[i].key,i);
-   }
-  //循环老的元素，看一下新的里面有没有
-    //如果有需要比较差异，如果没有要添加到列表中
-    //老的有新的没有要删除
-    const  toBePatched = e2 -s2 +1;//新元素的总个数 
-    const newIndexToOldIndexMap = new Array(toBePatched).fill(0);//一个记录是否比对过的映射表
-    for(let i =s1;i<=e1;i++){
-        const oldChild = c1[i];//老的孩子
-        let newIndex = keyToNewIndexMap.get(oldChild.key);
-        //用老的孩子去新的里面找
-        if(newIndex==undefined){
-  unmount(oldChild);
-        }else{
-            //新的位置对应的老的位置，如果数组里放的值大于零，说明已经patch过了
-            newIndexToOldIndexMap[newIndex-s2] = i+1;
-            patch(oldChild,c2[newIndex],el);
+        const keyToNewIndexMap = new Map();
+        for (let i = s2; i <= e2; i++) {
+            keyToNewIndexMap.set(c2[i].key, i);
         }
-    }
-    //需要移动位置
-  for(let i = toBePatched -1;i>=0;i--){
-    let index = i +s2;
-    let current = c2[index];
-    let anchor = index +1 <c2.length?c2[index+1].el:null;
-    if(newIndexToOldIndexMap[i] ===0){//创建
-patch(null,current,el,anchor);
-    }else{//不是零， 说明是已经比对过属性和儿子的了
-        debugger;
-  hostInsert(current.el,el,anchor);
+        //循环老的元素，看一下新的里面有没有
+        //如果有需要比较差异，如果没有要添加到列表中
+        //老的有新的没有要删除
+        const toBePatched = e2 - s2 + 1;//新元素的总个数 
+        const newIndexToOldIndexMap = new Array(toBePatched).fill(0);//一个记录是否比对过的映射表
+       //获取最长递增子序列】
+       
+        for (let i = s1; i <= e1; i++) {
+            const oldChild = c1[i];//老的孩子
+            let newIndex = keyToNewIndexMap.get(oldChild.key);
+            //用老的孩子去新的里面找
+            if (newIndex == undefined) {
+                unmount(oldChild);
+            } else {
+                //新的位置对应的老的位置，如果数组里放的值大于零，说明已经patch过了
+                newIndexToOldIndexMap[newIndex - s2] = i + 1;
+                patch(oldChild, c2[newIndex], el);
+            }
+        }
+        let increment =  getSequence(newIndexToOldIndexMap);
 
+        //需要移动位置
+        let j =increment.length -1;
+        for (let i = toBePatched - 1; i >= 0; i--) {
+            let index = i + s2;
+            let current = c2[index];
+            let anchor = index + 1 < c2.length ? c2[index + 1].el : null;
+            if (newIndexToOldIndexMap[i] === 0) {//创建
+                patch(null, current, el, anchor);
+            } else {//不是零， 说明是已经比对过属性和儿子的了
+                if(i != increment[j]){
+                    hostInsert(current.el, el, anchor);
+                }else{
+                    j--;
+                    console.log('不做插入')
+                }
+                
+                
+
+            }
+        }
+        //以上做法乱序中的元素都操作了一遍，这时候最长递增子序列就要登场了
+        //这个地方是vue2没有的哦
     }
-  }
-  //以上做法乱序中的元素都操作了一遍，这时候最长递增子序列就要登场了
-  //这个地方是vue2没有的哦
-    }
-  
+
 
     const pathchChildren = (n1, n2, el) => {
         //刚刚说漏了，这里才是最精彩的部分
@@ -220,16 +232,16 @@ patch(null,current,el,anchor);
         pathchChildren(n1, n2, el);
     }
 
-    const processElement = (n1, n2, container,anchor) => {
+    const processElement = (n1, n2, container, anchor) => {
         if (n1 === null) {
-            mountElement(n2, container,anchor)
+            mountElement(n2, container, anchor)
         } else {
 
             patchElement(n1, n2, container)//这里估计是重头戏里面的重头戏了，就是元素比对
         }
     }
 
-    const patch = (n1, n2, container,anchor = null) => {//核心的patch方法
+    const patch = (n1, n2, container, anchor = null) => {//核心的patch方法
         if (n1 === n2) { return };
 
         if (n1 && !isSameVnode(n1, n2)) {//判断两个vnode是否相同，不相同卸载再提交，
@@ -247,7 +259,7 @@ patch(null,current,el,anchor);
                 break;
             default:
                 if (shapeFlag & ShapeFlags.ELEMENT) {
-                    processElement(n1, n2, container,anchor);
+                    processElement(n1, n2, container, anchor);
                 }
         }
 
