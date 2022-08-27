@@ -13,7 +13,7 @@ function cleanupEffect(effect) {
     public parent = null;//该属性在处理嵌套属性的时候极其有用； 
     public deps = [];//记录属性，和track配合实现属性和effect多对多记录
     active = true;//这个effect默认是激活状态
-    constructor(public fn, public scheduler) {
+    constructor(public fn, public scheduler?) {
 
     };
     //不得不说，下面这个run方法实在是太精辟了，实现了数据变的时候，回去渲染页面，至此，对于响应式的原理又深入了一步

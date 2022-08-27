@@ -1,4 +1,4 @@
-import { reactive } from "@vue/reactivity";
+import { reactive, ReactiveEffect } from "@vue/reactivity";
 import { isString, ShapeFlags } from "@vue/shared";
 import { patchClass } from "packages/runtime-dom/src/modules/class"
 import { getSequence } from "./sequence";
@@ -253,10 +253,35 @@ export function createRenderer(renderOptions) {
         const state = reactive(data());
 
         const instance = {//组件的实例
-    state,
-    vnode,
-    subTree,
+            state,
+            vnode,
+            subTree: null,
+            isMounted: false,
+            update: null
         }
+        const componentUpdateFn = () => {//区分是初始化还是更新
+            if (!instance.isMounted) {//初始化
+
+                const subTree  = render.call(state);//不是bind而是call后续this会改？
+
+                 patch(null,subTree,container,anchor)
+
+                 instance.subTree = subTree;
+                 instance.isMounted = true;
+
+
+            } else {//组件内部更新
+  const subTree = render.call(state);
+  patch(instance.subTree,subTree,container,anchor);
+  
+            }
+        }
+
+        const effect = new ReactiveEffect(componentUpdateFn);
+        effect.run();//调用effect.run可以让组件强制更新渲染
+  //我们将组件强制更新的逻辑保存到了组件的实例上
+        let update = instance.update = effect.run.bind(effect);
+        update();
     }
 
     const processCommponent = (n1, n2, container, anchor) => {

@@ -32,6 +32,42 @@ var VueRuntimeDOM = (() => {
 
   // packages/reactivity/src/effect.ts
   var activeEffevt = void 0;
+  function cleanupEffect(effect) {
+    const { deps } = effect;
+    for (let i = 0; i < deps.length; i++) {
+      deps[i].delete(effect);
+    }
+    effect.deps.lenght = 0;
+  }
+  var ReactiveEffect = class {
+    constructor(fn, scheduler) {
+      this.fn = fn;
+      this.scheduler = scheduler;
+      this.parent = null;
+      this.deps = [];
+      this.active = true;
+    }
+    run() {
+      if (!this.active) {
+        cleanupEffect(this);
+        this.fn();
+      }
+      try {
+        this.parent = activeEffevt;
+        activeEffevt = this;
+        return this.fn();
+      } finally {
+        activeEffevt = this.parent;
+        this.parent = null;
+      }
+    }
+    stop() {
+      if (this.active) {
+        this.active = false;
+        cleanupEffect(this);
+      }
+    }
+  };
   var targetMap = /* @__PURE__ */ new WeakMap();
   function track(target, type, key) {
     if (!activeEffevt) {
@@ -66,13 +102,13 @@ var VueRuntimeDOM = (() => {
   }
   function triggerEffects(effects) {
     effects = new Set(effects);
-    effects.forEach((effect2) => {
-      if (effect2 !== activeEffevt) {
-        if (effect2.schduler) {
+    effects.forEach((effect) => {
+      if (effect !== activeEffevt) {
+        if (effect.schduler) {
           debugger;
-          effect2.schduler();
+          effect.schduler();
         } else {
-          effect2.run();
+          effect.run();
         }
       }
     });
@@ -407,8 +443,25 @@ var VueRuntimeDOM = (() => {
       const instance = {
         state,
         vnode,
-        subTree
+        subTree: null,
+        isMounted: false,
+        update: null
       };
+      const componentUpdateFn = () => {
+        if (!instance.isMounted) {
+          const subTree = render3.call(state);
+          patch(null, subTree, container, anchor);
+          instance.subTree = subTree;
+          instance.isMounted = true;
+        } else {
+          const subTree = render3.call(state);
+          patch(instance.subTree, subTree, container, anchor);
+        }
+      };
+      const effect = new ReactiveEffect(componentUpdateFn);
+      effect.run();
+      let update = instance.update = effect.run.bind(effect);
+      update();
     };
     const processCommponent = (n1, n2, container, anchor) => {
       if (n1 == null) {
