@@ -1,6 +1,7 @@
 import { reactive, ReactiveEffect } from "@vue/reactivity";
 import { isString, ShapeFlags } from "@vue/shared";
 import { patchClass } from "packages/runtime-dom/src/modules/class"
+import { queueJob } from "./scheduler";
 import { getSequence } from "./sequence";
 import { createVnode, Fragment, isSameVnode, Text } from "./vnode";
 
@@ -198,7 +199,7 @@ export function createRenderer(renderOptions) {
             }
             if (c1 !== c2) {
                 //进到这里面说明两个儿子都是文本，且文本内容不一样、
-                hostSetElementText(c2, el);
+                hostSetElementText(el, c2);
             }
         } else {
             //进到这里面说明不是数组就是空了，新的孩子
@@ -251,7 +252,6 @@ export function createRenderer(renderOptions) {
     const mountComponent = (vnode, container, anchor) => {
         const { data = () => { }, render } = vnode.type;
         const state = reactive(data());
-
         const instance = {//组件的实例
             state,
             vnode,
@@ -272,13 +272,16 @@ export function createRenderer(renderOptions) {
 
             } else {//组件内部更新
   const subTree = render.call(state);
+  debugger;
+  console.log("tmdsssss")
   patch(instance.subTree,subTree,container,anchor);
-  
+  instance.subTree = subTree;
+
             }
         }
 
-        const effect = new ReactiveEffect(componentUpdateFn);
-        effect.run();//调用effect.run可以让组件强制更新渲染
+        const effect = new ReactiveEffect(componentUpdateFn,()=>queueJob(instance.update));
+       //调用effect.run可以让组件强制更新渲染
   //我们将组件强制更新的逻辑保存到了组件的实例上
         let update = instance.update = effect.run.bind(effect);
         update();
@@ -304,7 +307,7 @@ export function createRenderer(renderOptions) {
         const { type, shapeFlag } = n2;
         //初始化节点
         //后续还有组件的初次渲染，目前是元素的初始化渲染
-        debugger;
+        ;
         switch (type) {
             case Text:
                 processText(n1, n2, container);

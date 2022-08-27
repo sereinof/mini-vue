@@ -23,16 +23,15 @@
                 }
             },
             render(){
-                return h('p',`${thie.name}今年${this.age}`)
+                debugger;
+                setTimeout(()=>{
+                    this.age++;
+                },1000)
+                return h('p',`${this.name}今年${this.age}`)
             }
         }
-        render(h(Fragment, 
-            [
-           
-                h(Text, { key: "a" }, 'ffrrr'),
-                h('h1', { key: "a" }, 'ffff'),
-           
-            ]), document.getElementById('app'))
+        render(h(vueConponent
+            ), document.getElementById('app'))
 
     </script>
 </body>

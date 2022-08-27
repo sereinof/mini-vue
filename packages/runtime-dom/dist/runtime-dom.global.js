@@ -104,9 +104,8 @@ var VueRuntimeDOM = (() => {
     effects = new Set(effects);
     effects.forEach((effect) => {
       if (effect !== activeEffevt) {
-        if (effect.schduler) {
-          debugger;
-          effect.schduler();
+        if (effect.scheduler) {
+          effect.scheduler();
         } else {
           effect.run();
         }
@@ -163,6 +162,29 @@ var VueRuntimeDOM = (() => {
     const proxy = new Proxy(target, mutableHandlers);
     reactiveMap.set(target, proxy);
     return proxy;
+  }
+
+  // packages/runtime-core/src/scheduler.ts
+  var queue = [];
+  var isFlushing = false;
+  var resolvePromise = Promise.resolve();
+  function queueJob(job) {
+    if (!queue.includes(job)) {
+      queue.push(job);
+    }
+    if (!isFlushing) {
+      isFlushing = true;
+      resolvePromise.then(() => {
+        isFlushing = false;
+        let copy = queue.slice(0);
+        for (let i = 0; i < queue.length; i++) {
+          let job2 = copy[i];
+          job2();
+        }
+        queue.length = 0;
+        copy.length = 0;
+      });
+    }
   }
 
   // packages/runtime-core/src/sequence.ts
@@ -396,7 +418,7 @@ var VueRuntimeDOM = (() => {
           unmountChildren(c1);
         }
         if (c1 !== c2) {
-          hostSetElementText(c2, el);
+          hostSetElementText(el, c2);
         }
       } else {
         if (preShapeFlags & 16 /* ARRAY_CHILDREN */) {
@@ -455,11 +477,13 @@ var VueRuntimeDOM = (() => {
           instance.isMounted = true;
         } else {
           const subTree = render3.call(state);
+          debugger;
+          console.log("tmdsssss");
           patch(instance.subTree, subTree, container, anchor);
+          instance.subTree = subTree;
         }
       };
-      const effect = new ReactiveEffect(componentUpdateFn);
-      effect.run();
+      const effect = new ReactiveEffect(componentUpdateFn, () => queueJob(instance.update));
       let update = instance.update = effect.run.bind(effect);
       update();
     };
@@ -479,7 +503,7 @@ var VueRuntimeDOM = (() => {
         n1 = null;
       }
       const { type, shapeFlag } = n2;
-      debugger;
+      ;
       switch (type) {
         case Text:
           processText(n1, n2, container);

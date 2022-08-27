@@ -128,10 +128,10 @@ export function triggerEffects(effects){
         // effect.run();
         if (effect !== activeEffevt) {
 
-            if (effect.schduler) {
+            if (effect.scheduler) {
 
-                debugger;
-                effect.schduler();//提供调度方法，如果用户传入scheduler方法，则调用这个方法
+                
+                effect.scheduler();//提供调度方法，如果用户传入scheduler方法，则调用这个方法
             } else { effect.run(); }
         }//这边其实是处理effect中有出发set操作的代码的，虽然这种情况很少
         //出现，但是还是需要预防，想象，effect里面有set操作，触发trigger方法，trigger方法又run，然后又是，就是循环了
