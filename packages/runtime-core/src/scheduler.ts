@@ -10,12 +10,13 @@ if(!isFlushing){//批处理逻辑
    resolvePromise.then(()=>{
     isFlushing = false;
     let copy = queue.slice(0);
+    queue.length =0;
+
     for(let i=0;i<queue.length;i++){
         let job = copy[i];
        
         job();
     }
-    queue.length =0;
     copy.length =0;
    })
 

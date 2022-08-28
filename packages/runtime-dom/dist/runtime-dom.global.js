@@ -177,11 +177,11 @@ var VueRuntimeDOM = (() => {
       resolvePromise.then(() => {
         isFlushing = false;
         let copy = queue.slice(0);
+        queue.length = 0;
         for (let i = 0; i < queue.length; i++) {
           let job2 = copy[i];
           job2();
         }
-        queue.length = 0;
         copy.length = 0;
       });
     }
@@ -460,7 +460,7 @@ var VueRuntimeDOM = (() => {
     };
     const mountComponent = (vnode, container, anchor) => {
       const { data = () => {
-      }, render: render3 } = vnode.type;
+      }, render: render3, props: propsOptions = {} } = vnode.type;
       const state = reactive(data());
       const instance = {
         state,
@@ -477,7 +477,6 @@ var VueRuntimeDOM = (() => {
           instance.isMounted = true;
         } else {
           const subTree = render3.call(state);
-          debugger;
           console.log("tmdsssss");
           patch(instance.subTree, subTree, container, anchor);
           instance.subTree = subTree;

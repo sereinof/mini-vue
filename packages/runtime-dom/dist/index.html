@@ -13,19 +13,27 @@
     <script src="./runtime-dom.global.js"></script>
     <script>
         let { createRenderer, h, render ,Text,Fragment} = VueRuntimeDOM;
-
+//组件的三大特性，1）属性，属性变化组件如何跟新
+//2）插槽3）事件
+//vue的setup函数（composition API入口）组件的生命周期
         const vueConponent = {//vue3兼容2的写法
             //data就好像是reactive而render就像是effect
+            props:{
+                    address:String,
+                    c:{}
+                },
             data(){
+              
                 return {
                     name:'zf',
                     age:'13'
                 }
             },
             render(){
-                debugger;
+                ;
                 setTimeout(()=>{
                     this.age++;
+                    this.name+= 'gg'
                 },1000)
                 return h('p',`${this.name}今年${this.age}`)
             }

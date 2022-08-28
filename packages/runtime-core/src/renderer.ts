@@ -250,7 +250,7 @@ export function createRenderer(renderOptions) {
         }
     }
     const mountComponent = (vnode, container, anchor) => {
-        const { data = () => { }, render } = vnode.type;
+        const { data = () => { }, render ,props:propsOptions={}} = vnode.type;
         const state = reactive(data());
         const instance = {//组件的实例
             state,
@@ -272,7 +272,6 @@ export function createRenderer(renderOptions) {
 
             } else {//组件内部更新
   const subTree = render.call(state);
-  debugger;
   console.log("tmdsssss")
   patch(instance.subTree,subTree,container,anchor);
   instance.subTree = subTree;
