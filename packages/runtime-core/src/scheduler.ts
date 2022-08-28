@@ -12,7 +12,7 @@ if(!isFlushing){//批处理逻辑
     let copy = queue.slice(0);
     queue.length =0;
 
-    for(let i=0;i<queue.length;i++){
+    for(let i=0;i<copy.length;i++){
         let job = copy[i];
        
         job();

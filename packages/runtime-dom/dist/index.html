@@ -12,11 +12,33 @@
     <div id="app"></div>
     <script src="./runtime-dom.global.js"></script>
     <script>
-        let { createRenderer, h, render ,Text,Fragment} = VueRuntimeDOM;
-//组件的三大特性，1）属性，属性变化组件如何跟新
-//2）插槽3）事件
-//vue的setup函数（composition API入口）组件的生命周期
-      
+        let { createRenderer, h, render, Text, Fragment } = VueRuntimeDOM;
+        //组件的三大特性，1）属性，属性变化组件如何跟新
+        //2）插槽3）事件
+        //vue的setup函数（composition API入口）组件的生命周期
+        const MyComponent = {
+            props:{
+                address:String
+            },
+            render(){
+                
+                return h(Text,{},this.address)
+            }
+        }
+        const VueComponent = {
+            data() {
+                return { flag: false }
+            },
+            render() {
+                return h(Fragment,
+                    [
+                        h('button', { onClick: () => {debugger;this.flag=!this.flag;console.log('周羽庆你好')} }, '切换渲染'),
+                        
+                        h(MyComponent, { address: this.flag ? "地球" : '月球' },"ceshof")
+                    ])
+            }
+        }
+        render(h(VueComponent),app);
 
     </script>
 </body>

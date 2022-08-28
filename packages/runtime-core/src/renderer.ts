@@ -2,7 +2,7 @@ import { reactive, ReactiveEffect } from "@vue/reactivity";
 import { hasOwn, isNumber, isString, ShapeFlags } from "@vue/shared";
 import { patchClass } from "packages/runtime-dom/src/modules/class"
 import { createComponentInstance, setupComponet } from "./component";
-import { initProps } from "./componentProps";
+import { initProps, updateProps } from "./componentProps";
 import { queueJob } from "./scheduler";
 import { getSequence } from "./sequence";
 import { createVnode, Fragment, isSameVnode, Text } from "./vnode";
@@ -259,8 +259,8 @@ export function createRenderer(renderOptions) {
         const componentUpdateFn = () => {//区分是初始化还是更新
             if (!instance.isMounted) {//初始化
         //关于加一些属性到html标签上乳data-v属性，还没有实现
+        
                 const subTree = render.call(instance.proxy);//不是bind而是call后续this会改？
-debugger;
                 patch(null, subTree, container, anchor)
 
                 instance.subTree = subTree;
@@ -269,7 +269,7 @@ debugger;
 
             } else {//组件内部更新
                 const subTree = render.call(instance.proxy);
-                debugger
+                
                 patch(instance.subTree, subTree, container, anchor);
                 instance.subTree = subTree;
 
@@ -296,16 +296,29 @@ debugger;
 
 
         // 实例 以及用户传入的props 
+        ;
         setupRenderEffect(instance, container, anchor);
 
 
-    }
+     }
+ const undateComponent = (n1,n2)=>{
+    //instance.props 是响应式的，而且可以更改，属性的更新会导致页面重新渲染
+    //注意这里从代码层面获取到instance，2⃣️render函数中是给了一个代理对象，
+    //是不能够对props进行更改的
+    const instance = (n2.component = n1.component);
+    //对于元素来说复用的是节点
+    //对于组件来说复用的是实例
+    const {props:prevProps} = n1;
+    const {props:nextProps} = n2;
+    updateProps(instance,prevProps,nextProps);
 
+ }
+      
     const processCommponent = (n1, n2, container, anchor) => {
         if (n1 == null) {
             mountComponent(n2, container, anchor)
         } else {//组件更新靠的是props
-
+   undateComponent(n1,n2,)
         }
     }
 

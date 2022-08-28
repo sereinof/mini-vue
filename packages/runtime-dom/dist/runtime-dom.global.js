@@ -190,6 +190,33 @@ var VueRuntimeDOM = (() => {
     instance.props = reactive(props);
     instance.attrs = attrs;
   }
+  var hasPropsChanged = (prevProps = {}, nextProps = {}) => {
+    const nextKeys = Object.keys(nextProps);
+    if (nextKeys.length !== Object.keys(prevProps).length) {
+      return true;
+    }
+    ;
+    for (let i = 0; i < nextKeys.length; i++) {
+      const key = nextKeys[i];
+      if (nextProps[key] !== prevProps[key]) {
+        return true;
+      }
+    }
+    return false;
+  };
+  function updateProps(instance, prevProps, nextProps) {
+    if (hasPropsChanged(prevProps, nextProps)) {
+      for (const key in nextProps) {
+        instance.props[key] = nextProps[key];
+      }
+      for (const key in instance.props) {
+        if (!hasOwn(nextProps, key)) {
+          delete instance.props[key];
+        }
+      }
+    }
+    ;
+  }
 
   // packages/runtime-core/src/component.ts
   function createComponentInstance(vnode) {
@@ -243,8 +270,8 @@ var VueRuntimeDOM = (() => {
         return console.warn("data option must be function");
       }
       instance.data = reactive(data.call(instance.proxy));
-      instance.render = type.render;
     }
+    instance.render = type.render;
   }
 
   // packages/runtime-core/src/scheduler.ts
@@ -261,7 +288,7 @@ var VueRuntimeDOM = (() => {
         isFlushing = false;
         let copy = queue.slice(0);
         queue.length = 0;
-        for (let i = 0; i < queue.length; i++) {
+        for (let i = 0; i < copy.length; i++) {
           let job2 = copy[i];
           job2();
         }
@@ -547,13 +574,11 @@ var VueRuntimeDOM = (() => {
       const componentUpdateFn = () => {
         if (!instance.isMounted) {
           const subTree = render3.call(instance.proxy);
-          debugger;
           patch(null, subTree, container, anchor);
           instance.subTree = subTree;
           instance.isMounted = true;
         } else {
           const subTree = render3.call(instance.proxy);
-          debugger;
           patch(instance.subTree, subTree, container, anchor);
           instance.subTree = subTree;
         }
@@ -565,12 +590,20 @@ var VueRuntimeDOM = (() => {
     const mountComponent = (vnode, container, anchor) => {
       let instance = vnode.component = createComponentInstance(vnode);
       setupComponet(instance);
+      ;
       setupRenderEffect(instance, container, anchor);
+    };
+    const undateComponent = (n1, n2) => {
+      const instance = n2.component = n1.component;
+      const { props: prevProps } = n1;
+      const { props: nextProps } = n2;
+      updateProps(instance, prevProps, nextProps);
     };
     const processCommponent = (n1, n2, container, anchor) => {
       if (n1 == null) {
         mountComponent(n2, container, anchor);
       } else {
+        undateComponent(n1, n2);
       }
     };
     const patch = (n1, n2, container, anchor = null) => {
@@ -619,7 +652,7 @@ var VueRuntimeDOM = (() => {
 
   // packages/runtime-core/src/h.ts
   function h(type, propsChildren, children) {
-    ;
+    debugger;
     const l = arguments.length;
     if (l === 2) {
       if (isObject(propsChildren) && !isArray(propsChildren)) {
@@ -737,7 +770,7 @@ var VueRuntimeDOM = (() => {
       patchClass(el, nextValue);
     } else if (key === "style") {
       patchStyle(el, prevValue, nextValue);
-    } else if (/^on[^a-z]/.test("key")) {
+    } else if (/^on[^a-z]/.test(key)) {
       patchEvent(el, key, nextValue);
     } else {
       patchAttr(el, key, nextValue);

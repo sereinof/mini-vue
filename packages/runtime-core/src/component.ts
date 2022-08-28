@@ -67,6 +67,7 @@ export function setupComponet(instance){
     return console.warn('data option must be function')
   }
   instance.data = reactive(data.call(instance.proxy));
-  instance.render = type.render;
+  
     }
+    instance.render = type.render;
 }

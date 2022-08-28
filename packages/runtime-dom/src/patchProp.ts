@@ -10,7 +10,7 @@ if(key=='class'){
     patchClass(el,nextValue);
 }else if(key==='style'){
     patchStyle(el,prevValue,nextValue);//样式 el.style
-}else if(/^on[^a-z]/.test('key')){
+}else if(/^on[^a-z]/.test(key)){
     patchEvent(el,key,nextValue);// events
 }else{
     patchAttr(el,key,nextValue);//普通属性
