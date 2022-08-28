@@ -1,4 +1,4 @@
-var VueRuntimeDOM = (() => {
+var VueRuntimeDom = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
   var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -204,15 +204,13 @@ var VueRuntimeDOM = (() => {
     }
     return false;
   };
-  function updateProps(instance, prevProps, nextProps) {
-    if (hasPropsChanged(prevProps, nextProps)) {
-      for (const key in nextProps) {
-        instance.props[key] = nextProps[key];
-      }
-      for (const key in instance.props) {
-        if (!hasOwn(nextProps, key)) {
-          delete instance.props[key];
-        }
+  function updateProps(prevProps, nextProps) {
+    for (const key in nextProps) {
+      prevProps[key] = nextProps[key];
+    }
+    for (const key in prevProps) {
+      if (!hasOwn(nextProps, key)) {
+        delete prevProps[key];
       }
     }
     ;
@@ -568,6 +566,11 @@ var VueRuntimeDOM = (() => {
         pathchChildren(n1, n2, container);
       }
     };
+    const updateComponentPreRender = (instance, next) => {
+      instance.next = null;
+      instance.vnode = next;
+      updateProps(instance.props, next.props);
+    };
     const setupRenderEffect = (instance, container, anchor) => {
       const { render: render3 } = instance;
       ;
@@ -578,6 +581,10 @@ var VueRuntimeDOM = (() => {
           instance.subTree = subTree;
           instance.isMounted = true;
         } else {
+          let { next } = instance;
+          if (next) {
+            updateComponentPreRender(instance, next);
+          }
           const subTree = render3.call(instance.proxy);
           patch(instance.subTree, subTree, container, anchor);
           instance.subTree = subTree;
@@ -593,11 +600,23 @@ var VueRuntimeDOM = (() => {
       ;
       setupRenderEffect(instance, container, anchor);
     };
+    const shouldUpdateComponent = (n1, n2) => {
+      const { props: prevProps, children: prevChildren } = n1;
+      const { props: nextProps, children: nextChildren } = n2;
+      if (prevProps === nextProps) {
+        return false;
+      }
+      if (prevChildren || nextChildren) {
+        return true;
+      }
+      return hasPropsChanged(prevProps, nextProps);
+    };
     const undateComponent = (n1, n2) => {
       const instance = n2.component = n1.component;
-      const { props: prevProps } = n1;
-      const { props: nextProps } = n2;
-      updateProps(instance, prevProps, nextProps);
+      if (shouldUpdateComponent(n1, n2)) {
+        instance.next = n2;
+        instance.update();
+      }
     };
     const processCommponent = (n1, n2, container, anchor) => {
       if (n1 == null) {
@@ -652,7 +671,6 @@ var VueRuntimeDOM = (() => {
 
   // packages/runtime-core/src/h.ts
   function h(type, propsChildren, children) {
-    debugger;
     const l = arguments.length;
     if (l === 2) {
       if (isObject(propsChildren) && !isArray(propsChildren)) {
@@ -732,7 +750,7 @@ var VueRuntimeDOM = (() => {
     return invoker;
   }
   function patchEvent(el, eventName, nextValue) {
-    let invokers = el._vei || (el._veo = {});
+    let invokers = el._vei || (el._vei = {});
     let exists = invokers[eventName];
     if (exists) {
       if (nextValue) {

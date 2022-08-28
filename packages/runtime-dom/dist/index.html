@@ -32,7 +32,7 @@
             render() {
                 return h(Fragment,
                     [
-                        h('button', { onClick: () => {debugger;this.flag=!this.flag;console.log('周羽庆你好')} }, '切换渲染'),
+                        h('button', { onClick: () => {this.flag=!this.flag;console.log('周羽庆你好')} }, '切换渲染'),
                         
                         h(MyComponent, { address: this.flag ? "地球" : '月球' },"ceshof")
                     ])

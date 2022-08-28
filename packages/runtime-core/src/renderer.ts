@@ -2,7 +2,7 @@ import { reactive, ReactiveEffect } from "@vue/reactivity";
 import { hasOwn, isNumber, isString, ShapeFlags } from "@vue/shared";
 import { patchClass } from "packages/runtime-dom/src/modules/class"
 import { createComponentInstance, setupComponet } from "./component";
-import { initProps, updateProps } from "./componentProps";
+import { hasPropsChanged, initProps, updateProps } from "./componentProps";
 import { queueJob } from "./scheduler";
 import { getSequence } from "./sequence";
 import { createVnode, Fragment, isSameVnode, Text } from "./vnode";
@@ -20,7 +20,7 @@ export function createRenderer(renderOptions) {
         patchProp: hostPatchprop,
     } = renderOptions;
     const normalize = (children, i) => {
-        if (isString(children[i])||isNumber(children[i])) {
+        if (isString(children[i]) || isNumber(children[i])) {
             let vnode = createVnode(Text, null, children[i]);
             children[i] = vnode;
         }
@@ -251,15 +251,20 @@ export function createRenderer(renderOptions) {
             pathchChildren(n1, n2, container);//走了是两个数组情况的diff算法
         }
     }
+    const updateComponentPreRender = (instance,next)=>{
+        instance.next = null;//next清空
+        instance.vnode = next;//实例上最新的虚拟节点
+        updateProps(instance.props,next.props);
+    }
 
     const setupRenderEffect = (instance, container, anchor) => {
-        
+
         const { render } = instance;
-;
+        ;
         const componentUpdateFn = () => {//区分是初始化还是更新
             if (!instance.isMounted) {//初始化
-        //关于加一些属性到html标签上乳data-v属性，还没有实现
-        
+                //关于加一些属性到html标签上乳data-v属性，还没有实现
+
                 const subTree = render.call(instance.proxy);//不是bind而是call后续this会改？
                 patch(null, subTree, container, anchor)
 
@@ -268,8 +273,15 @@ export function createRenderer(renderOptions) {
 
 
             } else {//组件内部更新
+                let { next} = instance;
+                if(next){
+                    //跟新前 我也需要拿到最新的属性来进行更新
+                    updateComponentPreRender(instance,next);
+                }
+
+
                 const subTree = render.call(instance.proxy);
-                
+
                 patch(instance.subTree, subTree, container, anchor);
                 instance.subTree = subTree;
 
@@ -284,7 +296,7 @@ export function createRenderer(renderOptions) {
     }
 
     const mountComponent = (vnode, container, anchor) => {
-        
+
         //此方法代码十分冗余需要改写
         //1）创建一个实例
         //2）给实例赋值
@@ -300,25 +312,40 @@ export function createRenderer(renderOptions) {
         setupRenderEffect(instance, container, anchor);
 
 
-     }
- const undateComponent = (n1,n2)=>{
-    //instance.props 是响应式的，而且可以更改，属性的更新会导致页面重新渲染
-    //注意这里从代码层面获取到instance，2⃣️render函数中是给了一个代理对象，
-    //是不能够对props进行更改的
-    const instance = (n2.component = n1.component);
-    //对于元素来说复用的是节点
-    //对于组件来说复用的是实例
-    const {props:prevProps} = n1;
-    const {props:nextProps} = n2;
-    updateProps(instance,prevProps,nextProps);
+    }
+    const shouldUpdateComponent = (n1, n2) => {
+        const { props: prevProps, children: prevChildren } = n1;
+        const { props: nextProps, children: nextChildren } = n2;
+        if (prevProps === nextProps) {
+            return false;
+        }
+        if (prevChildren || nextChildren) {
+            return true;
+        }
+        return hasPropsChanged(prevProps, nextProps);
 
- }
-      
+    }
+    const undateComponent = (n1, n2) => {
+        //instance.props 是响应式的，而且可以更改，属性的更新会导致页面重新渲染
+        //注意这里从代码层面获取到instance，2⃣️render函数中是给了一个代理对象，
+        //是不能够对props进行更改的
+        const instance = (n2.component = n1.component);
+        //对于元素来说复用的是节点
+        //对于组件来说复用的是实例
+        //需要跟新就强制调用组件的update方法
+        if (shouldUpdateComponent(n1, n2)) {
+            instance.next = n2;//将新的虚拟节点放到instance身上
+            instance.update();
+        }
+        // updateProps(instance,prevProps,nextProps);
+
+    }
+
     const processCommponent = (n1, n2, container, anchor) => {
         if (n1 == null) {
             mountComponent(n2, container, anchor)
         } else {//组件更新靠的是props
-   undateComponent(n1,n2,)
+            undateComponent(n1, n2,)
         }
     }
 

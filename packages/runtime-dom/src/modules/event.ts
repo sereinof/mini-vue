@@ -10,8 +10,8 @@ function creatInvoker(callback) {
 //源码中是可以绑定多个回调的就是传入一个数组
 export function patchEvent(el, eventName, nextValue) {
     //vue里面对于事件的处理有些许复杂，
-
-    let invokers = el._vei || (el._veo = {});
+//指数级增加事件的bug修复了
+    let invokers = el._vei || (el._vei = {});
     let exists = invokers[eventName];
     if (exists) {
         if (nextValue) {

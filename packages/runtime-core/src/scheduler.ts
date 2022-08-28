@@ -5,6 +5,7 @@ export function queueJob(job){
 if(!queue.includes(job)){
     queue.push(job);
 }
+//从目前来看这个scheduler参数很有用处，不管是之前的计算属性还是现在的组件都有用到
 if(!isFlushing){//批处理逻辑
     isFlushing = true;
    resolvePromise.then(()=>{
