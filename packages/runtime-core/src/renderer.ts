@@ -1,6 +1,7 @@
 import { reactive, ReactiveEffect } from "@vue/reactivity";
-import { hasOwn, isString, ShapeFlags } from "@vue/shared";
+import { hasOwn, isNumber, isString, ShapeFlags } from "@vue/shared";
 import { patchClass } from "packages/runtime-dom/src/modules/class"
+import { createComponentInstance, setupComponet } from "./component";
 import { initProps } from "./componentProps";
 import { queueJob } from "./scheduler";
 import { getSequence } from "./sequence";
@@ -19,7 +20,7 @@ export function createRenderer(renderOptions) {
         patchProp: hostPatchprop,
     } = renderOptions;
     const normalize = (children, i) => {
-        if (isString(children[i])) {
+        if (isString(children[i])||isNumber(children[i])) {
             let vnode = createVnode(Text, null, children[i]);
             children[i] = vnode;
         }
@@ -251,61 +252,15 @@ export function createRenderer(renderOptions) {
         }
     }
 
-    const publicPropertyMap = {
-        $attrs: (i) => i.attrs
-    }
-    const mountComponent = (vnode, container, anchor) => {
-        const { data = () => { }, render, props: propsOptions = {} } = vnode.type;
-        const state = reactive(data());
-        const instance = {//组件的实例
-            state,
-            vnode,
-            subTree: null,
-            isMounted: false,
-            update: null,
-            propsOptions,
-            props: {},
-            attrs: {},
-            proxy: null,
-        }
-        // 实例 以及用户传入的props 
-        initProps(instance, vnode.props);
-
-        instance.proxy = new Proxy(instance, {
-            get(target, key) {
-                const { state, props } = target;
-                if (state && hasOwn(state, key)) {//说明是自己data里的属性也就是所谓的状态
-                    return state[key]
-
-                } else if (props && hasOwn(props, key)) {//说明是props里的数据
-                    return props[key];//注意啊 这里都没有使用那个代理对应的反射
-                }
-                let getter = publicPropertyMap[key];//这里对于访问属性加一层限制，就是只可以访问
-                //访问这个映射表里面的属性
-                //用户写的模版最终要变成render函数，而模版里的this恰恰就是这个代理对象
-                if (getter) {
-                    return getter(instance);
-
-                }
-            },
-            set(target, key, value) {
-                const { state, props } = target;
-                if (state && hasOwn(state, key)) {//说明是自己data里的属性也就是所谓的状态
-                     state[key] = value;
-                     return true;
-
-                } else if (props && hasOwn(props, key)) {//说明是props里的数据
-    console.warn('attempting to mutate prop')
-                }
-            }
-        })
-
-
+    const setupRenderEffect = (instance, container, anchor) => {
+        
+        const { render } = instance;
+;
         const componentUpdateFn = () => {//区分是初始化还是更新
             if (!instance.isMounted) {//初始化
-
+        //关于加一些属性到html标签上乳data-v属性，还没有实现
                 const subTree = render.call(instance.proxy);//不是bind而是call后续this会改？
-
+debugger;
                 patch(null, subTree, container, anchor)
 
                 instance.subTree = subTree;
@@ -314,7 +269,7 @@ export function createRenderer(renderOptions) {
 
             } else {//组件内部更新
                 const subTree = render.call(instance.proxy);
-                console.log("tmdsssss")
+                debugger
                 patch(instance.subTree, subTree, container, anchor);
                 instance.subTree = subTree;
 
@@ -326,6 +281,24 @@ export function createRenderer(renderOptions) {
         //我们将组件强制更新的逻辑保存到了组件的实例上
         let update = instance.update = effect.run.bind(effect);
         update();
+    }
+
+    const mountComponent = (vnode, container, anchor) => {
+        
+        //此方法代码十分冗余需要改写
+        //1）创建一个实例
+        //2）给实例赋值
+        //3）创建一个effect
+        let instance = vnode.component = createComponentInstance(vnode);
+
+        //给实例赋值
+        setupComponet(instance);
+
+
+        // 实例 以及用户传入的props 
+        setupRenderEffect(instance, container, anchor);
+
+
     }
 
     const processCommponent = (n1, n2, container, anchor) => {
