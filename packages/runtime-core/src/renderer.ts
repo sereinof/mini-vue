@@ -1,6 +1,7 @@
 import { reactive, ReactiveEffect } from "@vue/reactivity";
-import { isString, ShapeFlags } from "@vue/shared";
+import { hasOwn, isString, ShapeFlags } from "@vue/shared";
 import { patchClass } from "packages/runtime-dom/src/modules/class"
+import { initProps } from "./componentProps";
 import { queueJob } from "./scheduler";
 import { getSequence } from "./sequence";
 import { createVnode, Fragment, isSameVnode, Text } from "./vnode";
@@ -249,39 +250,80 @@ export function createRenderer(renderOptions) {
             pathchChildren(n1, n2, container);//走了是两个数组情况的diff算法
         }
     }
+
+    const publicPropertyMap = {
+        $attrs: (i) => i.attrs
+    }
     const mountComponent = (vnode, container, anchor) => {
-        const { data = () => { }, render ,props:propsOptions={}} = vnode.type;
+        const { data = () => { }, render, props: propsOptions = {} } = vnode.type;
         const state = reactive(data());
         const instance = {//组件的实例
             state,
             vnode,
             subTree: null,
             isMounted: false,
-            update: null
+            update: null,
+            propsOptions,
+            props: {},
+            attrs: {},
+            proxy: null,
         }
+        // 实例 以及用户传入的props 
+        initProps(instance, vnode.props);
+
+        instance.proxy = new Proxy(instance, {
+            get(target, key) {
+                const { state, props } = target;
+                if (state && hasOwn(state, key)) {//说明是自己data里的属性也就是所谓的状态
+                    return state[key]
+
+                } else if (props && hasOwn(props, key)) {//说明是props里的数据
+                    return props[key];//注意啊 这里都没有使用那个代理对应的反射
+                }
+                let getter = publicPropertyMap[key];//这里对于访问属性加一层限制，就是只可以访问
+                //访问这个映射表里面的属性
+                //用户写的模版最终要变成render函数，而模版里的this恰恰就是这个代理对象
+                if (getter) {
+                    return getter(instance);
+
+                }
+            },
+            set(target, key, value) {
+                const { state, props } = target;
+                if (state && hasOwn(state, key)) {//说明是自己data里的属性也就是所谓的状态
+                     state[key] = value;
+                     return true;
+
+                } else if (props && hasOwn(props, key)) {//说明是props里的数据
+    console.warn('attempting to mutate prop')
+                }
+            }
+        })
+
+
         const componentUpdateFn = () => {//区分是初始化还是更新
             if (!instance.isMounted) {//初始化
 
-                const subTree  = render.call(state);//不是bind而是call后续this会改？
+                const subTree = render.call(instance.proxy);//不是bind而是call后续this会改？
 
-                 patch(null,subTree,container,anchor)
+                patch(null, subTree, container, anchor)
 
-                 instance.subTree = subTree;
-                 instance.isMounted = true;
+                instance.subTree = subTree;
+                instance.isMounted = true;
 
 
             } else {//组件内部更新
-  const subTree = render.call(state);
-  console.log("tmdsssss")
-  patch(instance.subTree,subTree,container,anchor);
-  instance.subTree = subTree;
+                const subTree = render.call(instance.proxy);
+                console.log("tmdsssss")
+                patch(instance.subTree, subTree, container, anchor);
+                instance.subTree = subTree;
 
             }
         }
 
-        const effect = new ReactiveEffect(componentUpdateFn,()=>queueJob(instance.update));
-       //调用effect.run可以让组件强制更新渲染
-  //我们将组件强制更新的逻辑保存到了组件的实例上
+        const effect = new ReactiveEffect(componentUpdateFn, () => queueJob(instance.update));
+        //调用effect.run可以让组件强制更新渲染
+        //我们将组件强制更新的逻辑保存到了组件的实例上
         let update = instance.update = effect.run.bind(effect);
         update();
     }

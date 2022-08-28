@@ -11,6 +11,9 @@ export const isString = (value) => {
 export const isNumber = (value) => {
     return typeof value === 'number';
 }
+const hasOwnProperty = Object.prototype.hasOwnProperty;
+  export const hasOwn = (value,key)=>hasOwnProperty.call(value,key);
+
 
 export const isArray = Array.isArray;
 export const assign = Object.assign;
