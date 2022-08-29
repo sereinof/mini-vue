@@ -1,5 +1,5 @@
 import { reactive, ReactiveEffect } from "@vue/reactivity";
-import { hasOwn, isNumber, isString, ShapeFlags } from "@vue/shared";
+import { hasOwn, invokeArrayFns, isNumber, isString, ShapeFlags } from "@vue/shared";
 import { patchClass } from "packages/runtime-dom/src/modules/class"
 import { createComponentInstance, setupComponet } from "./component";
 import { hasPropsChanged, initProps, updateProps } from "./componentProps";
@@ -266,26 +266,37 @@ export function createRenderer(renderOptions) {
             if (!instance.isMounted) {//初始化
                 //关于加一些属性到html标签上乳data-v属性，还没有实现
 
+                let {bm,m} = instance;
+                if(bm){
+                    invokeArrayFns(bm);
+                }
                 const subTree = render.call(instance.proxy);//不是bind而是call后续this会改？
                 
                 patch(null, subTree, container, anchor)
-
+    if(m){
+        invokeArrayFns(m);
+    }
                 instance.subTree = subTree;
                 instance.isMounted = true;
 
 
             } else {//组件内部更新
-                let { next} = instance;
+                let { next,bu,u} = instance;
                 if(next){
                     //跟新前 我也需要拿到最新的属性来进行更新
                     updateComponentPreRender(instance,next);
                 }
-
+  if(bu){
+    invokeArrayFns(bu)
+  }
 
                 const subTree = render.call(instance.proxy);
 ;
                 patch(instance.subTree, subTree, container, anchor);
                 instance.subTree = subTree;
+                if(u){
+                    invokeArrayFns(u);
+                }
 
             }
         }
@@ -354,7 +365,7 @@ export function createRenderer(renderOptions) {
     const patch = (n1, n2, container, anchor = null) => {//核心的patch方法
         
         if (n1 === n2) { return };
-        debugger
+        
         if (n1 && !isSameVnode(n1, n2)) {//判断两个vnode是否相同，不相同卸载再提交，
 
             unmount(n1);

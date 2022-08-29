@@ -12,10 +12,7 @@
     <div id="app"></div>
     <script src="./runtime-dom.global.js"></script>
     <script>
-        let { createRenderer, ref, h, render, Text, Fragment } = VueRuntimeDOM;
-        //组件的三大特性，1）属性，属性变化组件如何跟新
-        //2）插槽3）事件
-        //vue的setup函数（composition API入口）组件的生命周期
+        let { createRenderer, getcurrentInstance,ref, h, render, Text, Fragment,onBeforeMount, onMounted,onUpdated,onBeforeUpdate} = VueRuntimeDOM;
         const MyComponent = {
             props: {
                 address: String
@@ -30,6 +27,19 @@
                 address: String,
             },
             setup(props, { emit }) {
+                //生命周期函数需要在setup中写，为了与组件实例绑定
+                //这后面是发布订阅模式真的棒
+                onBeforeMount(()=>{
+ let a = getcurrentInstance();
+ console.log(a)
+                });
+                onBeforeUpdate(()=>{
+console.log('nihafg')
+                });
+                onMounted(()=>{
+                    console.log('nihafg')
+
+                })
                 const name = ref("周玉庆");
                 const age = ref('35');
                 setTimeout(() => {
