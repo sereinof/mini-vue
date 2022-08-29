@@ -454,7 +454,9 @@ var VueRuntimeDOM = (() => {
           const eventName = `on${event[0].toUpperCase() + event.slice(1)}`;
           const handler = instance.vnode.props[eventName];
           handler && handler(...args);
-        }
+        },
+        attrs: instance.attrs,
+        slots: instance.slots
       };
       const setupResult = setup(instance.props, setupContext);
       if (isFunction(setupResult)) {
@@ -596,6 +598,7 @@ var VueRuntimeDOM = (() => {
       }
     };
     function mountElement(vnode, container, anchor) {
+      debugger;
       let { type, props, children, shapeFlag } = vnode;
       vnode.el = hostCreateElenment(type);
       let el = vnode.el;
@@ -775,7 +778,6 @@ var VueRuntimeDOM = (() => {
       const componentUpdateFn = () => {
         if (!instance.isMounted) {
           const subTree = render3.call(instance.proxy);
-          debugger;
           patch(null, subTree, container, anchor);
           instance.subTree = subTree;
           instance.isMounted = true;
@@ -785,7 +787,7 @@ var VueRuntimeDOM = (() => {
             updateComponentPreRender(instance, next);
           }
           const subTree = render3.call(instance.proxy);
-          debugger;
+          ;
           patch(instance.subTree, subTree, container, anchor);
           instance.subTree = subTree;
         }
@@ -830,6 +832,7 @@ var VueRuntimeDOM = (() => {
         return;
       }
       ;
+      debugger;
       if (n1 && !isSameVnode(n1, n2)) {
         unmount(n1);
         n1 = null;

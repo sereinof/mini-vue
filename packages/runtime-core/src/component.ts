@@ -96,6 +96,9 @@ export function setupComponet(instance) {
                 const handler = instance.vnode.props[eventName];
                 handler && handler(...args);
             }
+            ,
+            attrs:instance.attrs,
+            slots:instance.slots,
         };
         const setupResult = setup(instance.props, setupContext);
         if (isFunction(setupResult)) {

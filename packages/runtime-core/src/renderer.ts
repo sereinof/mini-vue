@@ -35,6 +35,7 @@ export function createRenderer(renderOptions) {
     }
 
     function mountElement(vnode, container, anchor) {
+        debugger;
         let { type, props, children, shapeFlag } = vnode;
         vnode.el = hostCreateElenment(type);//将真实元素挂在到这个虚拟节点上，后续用于复用节点
         let el = vnode.el;
@@ -266,7 +267,7 @@ export function createRenderer(renderOptions) {
                 //关于加一些属性到html标签上乳data-v属性，还没有实现
 
                 const subTree = render.call(instance.proxy);//不是bind而是call后续this会改？
-                debugger;
+                
                 patch(null, subTree, container, anchor)
 
                 instance.subTree = subTree;
@@ -282,7 +283,7 @@ export function createRenderer(renderOptions) {
 
 
                 const subTree = render.call(instance.proxy);
-debugger;
+;
                 patch(instance.subTree, subTree, container, anchor);
                 instance.subTree = subTree;
 
@@ -351,8 +352,9 @@ debugger;
     }
 
     const patch = (n1, n2, container, anchor = null) => {//核心的patch方法
+        
         if (n1 === n2) { return };
-
+        debugger
         if (n1 && !isSameVnode(n1, n2)) {//判断两个vnode是否相同，不相同卸载再提交，
 
             unmount(n1);
@@ -394,6 +396,7 @@ debugger;
 
         } else {
             //这里既有初始化的逻辑，也有更新的逻辑
+            
             patch(container._vnode || null, vnode, container)//这一行有点不懂，难道是默认这个container
             //只挂载一个虚拟节点吗？
         }

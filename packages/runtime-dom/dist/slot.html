@@ -20,10 +20,11 @@
             },
             render(){
                 
-                return h(Fragment,[
-                    h('div',h('p','cefff')),
-                    h('div',this.$slots.footer()),
-
+                return h('p',[
+                    h('div',null,h('p',null,'cefff')),
+                   h('div',null,this.$slots.footer()),
+//这里有个大坑，也就是h方法的用法，配合插槽的时候，因为函数也会被认为是对象
+//所以第二个参数必须给个null，
                 ])
             }
         }
@@ -37,7 +38,7 @@
             })
         }
     }
-        render(h(VueComponent,{onXxx:()=>alert('nihoa')}),app);
+        render(h(VueComponent),document.getElementById('app'));
 
     </script>
 </body>
