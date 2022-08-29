@@ -12,3 +12,4 @@ export function render(vnode, container) {//注意参数，前者是一个虚拟
 //这里有点难以理解，h方法无关好理解，但是render方法需要传入一个真实的dom难道这也与dom操作无关吗
 
 export   * from "@vue/runtime-core";
+export   * from "@vue/reactivity";

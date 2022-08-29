@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script src="./runtime-dom.global.js"></script>
+    <script>
+        let { createRenderer,ref, h, render, Text, Fragment } = VueRuntimeDOM;
+//组件的插槽是一个对象，放着映射关系，渲染组件的时候去映射表中查
+        const MyComponent = {
+            props:{
+                address:String
+            },
+            render(){
+                
+                return h(Fragment,[
+                    h('div',h('p','cefff')),
+                    h('div',this.$slots.footer()),
+
+                ])
+            }
+        }
+    const VueComponent = {
+        render(){
+            //h方法的第三个参数如果是对象，这个第三个参数是相对而说的其实指的是children那个参数，
+            //如果是对象则说明是插槽
+            return h(MyComponent,null,{
+                header:()=>h('p','header'),
+                footer:()=>h('p','footer')
+            })
+        }
+    }
+        render(h(VueComponent,{onXxx:()=>alert('nihoa')}),app);
+
+    </script>
+</body>
+
+</html>

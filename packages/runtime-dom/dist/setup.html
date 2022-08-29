@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script src="./runtime-dom.global.js"></script>
+    <script>
+        let { createRenderer,ref, h, render, Text, Fragment } = VueRuntimeDOM;
+        //组件的三大特性，1）属性，属性变化组件如何跟新
+        //2）插槽3）事件
+        //vue的setup函数（composition API入口）组件的生命周期
+        const MyComponent = {
+            props:{
+                address:String
+            },
+            render(){
+                
+                return h(Text,{},this.address)
+            }
+        }
+        const VueComponent = {
+           peops:{
+   address:String,
+           },
+           setup(props,{emit}){
+   const name = ref("周玉庆");
+   const age = ref('35');
+   setTimeout(()=>{
+    age.value ++;
+   },1000);
+   return ()=>{
+    return h('p',{onClick:()=>emit('xxx','ok')},name.value+age.value)
+   }
+           },
+    
+        }
+        render(h(VueComponent,{onXxx:()=>alert('nihoa')}),app);
+
+    </script>
+</body>
+
+</html>

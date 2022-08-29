@@ -266,6 +266,7 @@ export function createRenderer(renderOptions) {
                 //关于加一些属性到html标签上乳data-v属性，还没有实现
 
                 const subTree = render.call(instance.proxy);//不是bind而是call后续this会改？
+                debugger;
                 patch(null, subTree, container, anchor)
 
                 instance.subTree = subTree;
@@ -281,7 +282,7 @@ export function createRenderer(renderOptions) {
 
 
                 const subTree = render.call(instance.proxy);
-
+debugger;
                 patch(instance.subTree, subTree, container, anchor);
                 instance.subTree = subTree;
 

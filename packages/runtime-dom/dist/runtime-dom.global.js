@@ -1,4 +1,4 @@
-var VueRuntimeDom = (() => {
+var VueRuntimeDOM = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
   var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -21,23 +21,36 @@ var VueRuntimeDom = (() => {
   var src_exports = {};
   __export(src_exports, {
     Fragment: () => Fragment,
+    ReactiveEffect: () => ReactiveEffect,
     Text: () => Text,
+    activeEffevt: () => activeEffevt,
+    computed: () => computed,
     createRenderer: () => createRenderer,
     createVnode: () => createVnode,
+    effect: () => effect,
     h: () => h,
     isSameVnode: () => isSameVnode,
     isVnode: () => isVnode,
-    render: () => render
+    proxyRefs: () => proxyRefs,
+    reactive: () => reactive,
+    ref: () => ref,
+    render: () => render,
+    toRefs: () => toRefs,
+    track: () => track,
+    trackEffects: () => trackEffects,
+    trigger: () => trigger,
+    triggerEffects: () => triggerEffects,
+    watch: () => watch
   });
 
   // packages/reactivity/src/effect.ts
   var activeEffevt = void 0;
-  function cleanupEffect(effect) {
-    const { deps } = effect;
+  function cleanupEffect(effect2) {
+    const { deps } = effect2;
     for (let i = 0; i < deps.length; i++) {
-      deps[i].delete(effect);
+      deps[i].delete(effect2);
     }
-    effect.deps.lenght = 0;
+    effect2.deps.lenght = 0;
   }
   var ReactiveEffect = class {
     constructor(fn, scheduler) {
@@ -68,6 +81,13 @@ var VueRuntimeDom = (() => {
       }
     }
   };
+  function effect(fn, options = {}) {
+    const _effect = new ReactiveEffect(fn, options.scheduler);
+    _effect.run();
+    const runner = _effect.run.bind(_effect);
+    runner.effect = _effect;
+    return runner;
+  }
   var targetMap = /* @__PURE__ */ new WeakMap();
   function track(target, type, key) {
     if (!activeEffevt) {
@@ -87,7 +107,11 @@ var VueRuntimeDom = (() => {
     let shouldTrack = !dep.has(activeEffevt);
     if (shouldTrack) {
       dep.add(activeEffevt);
-      activeEffevt.deps.push(dep);
+      try {
+        activeEffevt.deps.push(dep);
+      } catch (e) {
+        console.log("\u54CD\u5E94\u5F0F\u7CFB\u7EDF\u51FAbug\u4E86\uFF01\uFF01");
+      }
     }
   }
   function trigger(target, type, key, value, oldValue) {
@@ -102,12 +126,12 @@ var VueRuntimeDom = (() => {
   }
   function triggerEffects(effects) {
     effects = new Set(effects);
-    effects.forEach((effect) => {
-      if (effect !== activeEffevt) {
-        if (effect.scheduler) {
-          effect.scheduler();
+    effects.forEach((effect2) => {
+      if (effect2 !== activeEffevt) {
+        if (effect2.scheduler) {
+          effect2.scheduler();
         } else {
-          effect.run();
+          effect2.run();
         }
       }
     });
@@ -155,6 +179,9 @@ var VueRuntimeDom = (() => {
 
   // packages/reactivity/src/reactive.ts
   var reactiveMap = /* @__PURE__ */ new WeakMap();
+  function isReactive(value) {
+    return !!(value && value["__v_isReactive" /* IS_REACTIVE */]);
+  }
   function reactive(target) {
     if (!isObject(target)) {
       return;
@@ -170,6 +197,143 @@ var VueRuntimeDom = (() => {
     const proxy = new Proxy(target, mutableHandlers);
     reactiveMap.set(target, proxy);
     return proxy;
+  }
+
+  // packages/reactivity/src/computed.ts
+  var ComputedRefImpl = class {
+    constructor(getter, setter) {
+      this.getter = getter;
+      this.setter = setter;
+      this._dirty = true;
+      this.__v_isReadonly = true;
+      this.__v_isRef = true;
+      this._value = null;
+      this.dep = /* @__PURE__ */ new Set();
+      this.effect = new ReactiveEffect(getter, () => {
+        if (!this._dirty) {
+          debugger;
+          this._dirty = true;
+          this.effect.run();
+        }
+      });
+    }
+    get value() {
+      trackEffects(this.dep);
+      debugger;
+      if (this._dirty) {
+        this._dirty = false;
+        this._value = this.effect.run();
+      }
+      return this._value;
+    }
+    set value(newValue) {
+      triggerEffects(this.dep);
+      this.setter(newValue);
+    }
+  };
+  var computed = (getterOrOptions) => {
+    let onlyGetter = isFunction(getterOrOptions);
+    let getter;
+    let setter;
+    if (onlyGetter) {
+      getter = getterOrOptions;
+      setter = () => {
+        console.warn("no set");
+      };
+    } else {
+      getter = getterOrOptions.get;
+      setter = getterOrOptions.set;
+    }
+    return new ComputedRefImpl(getter, setter);
+  };
+
+  // packages/reactivity/src/watch.ts
+  function watch(source, cb) {
+    let getter;
+    if (isReactive(source)) {
+      getter = () => source;
+    } else if (isFunction(source)) {
+      getter = source;
+    }
+    let cleanup;
+    const onCleanup = (fn) => {
+      cleanup = fn;
+    };
+    const job = () => {
+      if (cleanup)
+        cleanup();
+      const newValue = effect2.run();
+      cb(newValue, oldValue, onCleanup);
+      oldValue = newValue;
+    };
+    let oldValue;
+    const effect2 = new ReactiveEffect(getter, job);
+    oldValue = effect2.run();
+  }
+
+  // packages/reactivity/src/ref.ts
+  function toReactive(value) {
+    return isObject(value) ? reactive(value) : value;
+  }
+  var RefImpl = class {
+    constructor(rawValue) {
+      this.rawValue = rawValue;
+      this.dep = /* @__PURE__ */ new Set();
+      this.__v_isRef = true;
+      this._value = toReactive(rawValue);
+    }
+    get value() {
+      return this._value;
+    }
+    set value(newvalue) {
+      trackEffects(this.dep);
+      if (newvalue !== this.rawValue) {
+        this._value = toReactive(newvalue);
+        this.rawValue = newvalue;
+        triggerEffects(this.dep);
+      }
+    }
+  };
+  function ref(value) {
+    return new RefImpl(value);
+  }
+  var ObjectRefImpl = class {
+    constructor(object, key) {
+      this.object = object;
+      this.key = key;
+    }
+    set value(newValue) {
+      this.object[this.key] = newValue;
+    }
+    get value() {
+      return this.object[this.key];
+    }
+  };
+  function toRef(object, key) {
+    return new ObjectRefImpl(object, key);
+  }
+  function toRefs(object) {
+    const result = isArray(object) ? new Array(object.length) : {};
+    for (let key in object) {
+      result[key] = toRef(object, key);
+    }
+  }
+  function proxyRefs(object) {
+    return new Proxy(object, {
+      get(target, key, receiver) {
+        let r = Reflect.get(target, key, receiver);
+        return r.___v_isRef ? r.value : r;
+      },
+      set(target, key, value, receiver) {
+        let oldValue = target[key];
+        if (oldValue.___v_isRef) {
+          oldValue.value = value;
+          return true;
+        } else {
+          return Reflect.set(target, key, key, receiver);
+        }
+      }
+    });
   }
 
   // packages/runtime-core/src/componentProps.ts
@@ -228,18 +392,23 @@ var VueRuntimeDom = (() => {
       props: {},
       attrs: {},
       proxy: null,
-      render: null
+      render: null,
+      setUpState: {},
+      slots: {}
     };
     return instance;
   }
   var publicPropertyMap = {
-    $attrs: (i) => i.attrs
+    $attrs: (i) => i.attrs,
+    $slots: (i) => i.slots
   };
   var publicInstanceProxy = {
     get(target, key) {
-      const { data, props } = target;
+      const { data, props, setUpState } = target;
       if (data && hasOwn(data, key)) {
         return data[key];
+      } else if (hasOwn(setUpState, key)) {
+        return setUpState[key];
       } else if (props && hasOwn(props, key)) {
         return props[key];
       }
@@ -249,18 +418,27 @@ var VueRuntimeDom = (() => {
       }
     },
     set(target, key, value) {
-      const { data, props } = target;
+      const { data, props, setUpState } = target;
       if (data && hasOwn(data, key)) {
         data[key] = value;
+        return true;
+      } else if (hasOwn(setUpState, key)) {
+        setUpState[key] = value;
         return true;
       } else if (props && hasOwn(props, key)) {
         console.warn("attempting to mutate prop" + key);
       }
     }
   };
+  function initSlots(instance, children) {
+    if (instance.vnode.shapeFlag & 32 /* SLOTS_CHILDREN */) {
+      instance.slots = children;
+    }
+  }
   function setupComponet(instance) {
-    let { props, type } = instance.vnode;
+    let { props, type, children } = instance.vnode;
     initProps(instance, props);
+    initSlots(instance, children);
     instance.proxy = new Proxy(instance, publicInstanceProxy);
     let data = type.data;
     if (data) {
@@ -269,7 +447,25 @@ var VueRuntimeDom = (() => {
       }
       instance.data = reactive(data.call(instance.proxy));
     }
-    instance.render = type.render;
+    let setup = type.setup;
+    if (setup) {
+      const setupContext = {
+        emit: (event, ...args) => {
+          const eventName = `on${event[0].toUpperCase() + event.slice(1)}`;
+          const handler = instance.vnode.props[eventName];
+          handler && handler(...args);
+        }
+      };
+      const setupResult = setup(instance.props, setupContext);
+      if (isFunction(setupResult)) {
+        instance.render = setupResult;
+      } else if (isObject(setupResult)) {
+        instance.setUpState = proxyRefs(setupResult);
+      }
+    }
+    if (!instance.render) {
+      instance.render = type.render;
+    }
   }
 
   // packages/runtime-core/src/scheduler.ts
@@ -362,6 +558,8 @@ var VueRuntimeDom = (() => {
       let type2 = 0;
       if (isArray(children)) {
         type2 = 16 /* ARRAY_CHILDREN */;
+      } else if (isObject(children)) {
+        type2 = 32 /* SLOTS_CHILDREN */;
       } else {
         children = String(children);
         type2 = 8 /* TEXT_CHILDREN */;
@@ -577,6 +775,7 @@ var VueRuntimeDom = (() => {
       const componentUpdateFn = () => {
         if (!instance.isMounted) {
           const subTree = render3.call(instance.proxy);
+          debugger;
           patch(null, subTree, container, anchor);
           instance.subTree = subTree;
           instance.isMounted = true;
@@ -586,12 +785,13 @@ var VueRuntimeDom = (() => {
             updateComponentPreRender(instance, next);
           }
           const subTree = render3.call(instance.proxy);
+          debugger;
           patch(instance.subTree, subTree, container, anchor);
           instance.subTree = subTree;
         }
       };
-      const effect = new ReactiveEffect(componentUpdateFn, () => queueJob(instance.update));
-      let update = instance.update = effect.run.bind(effect);
+      const effect2 = new ReactiveEffect(componentUpdateFn, () => queueJob(instance.update));
+      let update = instance.update = effect2.run.bind(effect2);
       update();
     };
     const mountComponent = (vnode, container, anchor) => {

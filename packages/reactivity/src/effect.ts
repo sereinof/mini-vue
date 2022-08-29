@@ -102,7 +102,11 @@ export function trackEffects(dep){
     let shouldTrack = !dep.has(activeEffevt);
     if (shouldTrack) {
         dep.add(activeEffevt);
-        activeEffevt.deps.push(dep)//感觉这里有点问题
+        try{
+        activeEffevt.deps.push(dep)//感觉这里有点问题}
+        }catch{
+            console.log('响应式系统出bug了！！')
+        }
     }
 }
 //卧槽 上面只是单向记录，属性记录的effect，难不成effect也需要记录属性？
