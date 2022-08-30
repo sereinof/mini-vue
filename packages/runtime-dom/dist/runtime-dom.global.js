@@ -1,4 +1,4 @@
-var VueRuntimeDOM = (() => {
+var VueRuntimeDom = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
   var __getOwnPropNames = Object.getOwnPropertyNames;
