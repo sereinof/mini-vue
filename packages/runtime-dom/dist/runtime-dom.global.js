@@ -1,4 +1,4 @@
-var VueRuntimeDOM = (() => {
+var VueRuntimeDom = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
   var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -641,7 +641,6 @@ var VueRuntimeDOM = (() => {
       }
     };
     function mountElement(vnode, container, anchor) {
-      debugger;
       let { type, props, children, shapeFlag } = vnode;
       vnode.el = hostCreateElenment(type);
       let el = vnode.el;
@@ -760,7 +759,7 @@ var VueRuntimeDOM = (() => {
         }
       }
     };
-    const pathchChildren = (n1, n2, el) => {
+    const patchChildren = (n1, n2, el) => {
       const c1 = n1.children;
       const c2 = n2.children;
       const preShapeFlags = n1.shapeFlag;
@@ -789,12 +788,28 @@ var VueRuntimeDOM = (() => {
         }
       }
     };
+    const patchBlockChildren = (n1, n2) => {
+      for (let i = 0; i < n2.dynamicChildren.length; i++) {
+        patchElement(n1.dynamicChildren[i], n2.dynamicChildren[i]);
+      }
+    };
     const patchElement = (n1, n2, container) => {
       let el = n2.el = n1.el;
       let oladProps = n1.props || {};
       let newProps = n2.props || {};
-      patchProps(oladProps, newProps, el);
-      pathchChildren(n1, n2, el);
+      let { patchFlag } = n2;
+      if (patchFlag & 2 /* CLASS */) {
+        if (oladProps.class !== newProps.class) {
+          hostPatchprop(el, "class", newProps.class);
+        }
+      } else {
+        patchProps(oladProps, newProps, el);
+      }
+      if (n2.dynamicChildren) {
+        patchBlockChildren(n1, n2);
+      } else {
+        patchChildren(n1, n2, el);
+      }
     };
     const processElement = (n1, n2, container, anchor) => {
       if (n1 === null) {
@@ -807,7 +822,7 @@ var VueRuntimeDOM = (() => {
       if (n1 == null) {
         mountChildren(n2.children, container);
       } else {
-        pathchChildren(n1, n2, container);
+        patchChildren(n1, n2, container);
       }
     };
     const updateComponentPreRender = (instance, next) => {
@@ -884,6 +899,7 @@ var VueRuntimeDOM = (() => {
       }
     };
     const patch = (n1, n2, container, anchor = null) => {
+      debugger;
       if (n1 === n2) {
         return;
       }

@@ -1,5 +1,5 @@
 import { reactive, ReactiveEffect } from "@vue/reactivity";
-import { hasOwn, invokeArrayFns, isNumber, isString, ShapeFlags } from "@vue/shared";
+import { hasOwn, invokeArrayFns, isNumber, isString, PatchFlags, ShapeFlags } from "@vue/shared";
 import { patchClass } from "packages/runtime-dom/src/modules/class"
 import { createComponentInstance, setupComponet } from "./component";
 import { hasPropsChanged, initProps, updateProps } from "./componentProps";
@@ -35,7 +35,7 @@ export function createRenderer(renderOptions) {
     }
 
     function mountElement(vnode, container, anchor) {
-        debugger;
+        
         let { type, props, children, shapeFlag } = vnode;
         vnode.el = hostCreateElenment(type);//将真实元素挂在到这个虚拟节点上，后续用于复用节点
         let el = vnode.el;
@@ -187,8 +187,8 @@ export function createRenderer(renderOptions) {
         //这个地方是vue2没有的哦
     }
 
-
-    const pathchChildren = (n1, n2, el) => {
+    //下面这个方法名字打错了， 但是可以理解为是一个全量diff算法
+    const patchChildren = (n1, n2, el) => {
         //刚刚说漏了，这里才是最精彩的部分
         const c1 = n1.children;
         const c2 = n2.children;
@@ -227,14 +227,37 @@ export function createRenderer(renderOptions) {
         }
     }
 
-    const patchElement = (n1, n2, container) => {
+    const patchBlockChildren = (n1, n2)=>{
+        for (let i = 0; i < n2.dynamicChildren.length; i++) {
+            patchElement(n1.dynamicChildren[i], n2.dynamicChildren[i]);
+        }
+    }
+
+    const patchElement = (n1, n2, container?) => {
         let el = n2.el = n1.el;//居然进来比对了 当然要复用节点
         let oladProps = n1.props || {};
         let newProps = n2.props || {};
-        patchProps(oladProps, newProps, el);//这里不是container而是el，找了好久，幸亏找出了不想computed一样
+  
+ let {patchFlag} = n2;
+ if(patchFlag&PatchFlags.CLASS){
 
+if(oladProps.class!==newProps.class){//对于类名的靶向更新
+    hostPatchprop(el,'class',newProps.class)
+}
+//style。。事件都可以靶向更新 
 
-        pathchChildren(n1, n2, el);
+ }else{
+    patchProps(oladProps, newProps, el);//这里不是container而是el，找了好久，幸亏找出了不想computed一样
+
+ }
+
+        if (n2.dynamicChildren) {
+            
+            patchBlockChildren(n1, n2)
+        } else {
+            patchChildren(n1, n2, el);
+        }
+
     }
 
     const processElement = (n1, n2, container, anchor) => {
@@ -249,13 +272,13 @@ export function createRenderer(renderOptions) {
         if (n1 == null) {
             mountChildren(n2.children, container)
         } else {
-            pathchChildren(n1, n2, container);//走了是两个数组情况的diff算法
+            patchChildren(n1, n2, container);//走了是两个数组情况的diff算法
         }
     }
-    const updateComponentPreRender = (instance,next)=>{
+    const updateComponentPreRender = (instance, next) => {
         instance.next = null;//next清空
         instance.vnode = next;//实例上最新的虚拟节点
-        updateProps(instance.props,next.props);
+        updateProps(instance.props, next.props);
     }
 
     const setupRenderEffect = (instance, container, anchor) => {
@@ -266,35 +289,35 @@ export function createRenderer(renderOptions) {
             if (!instance.isMounted) {//初始化
                 //关于加一些属性到html标签上乳data-v属性，还没有实现
 
-                let {bm,m} = instance;
-                if(bm){
+                let { bm, m } = instance;
+                if (bm) {
                     invokeArrayFns(bm);
                 }
-                const subTree = render.call(instance.proxy,instance.proxy);//不是bind而是call后续this会改？
-                
+                const subTree = render.call(instance.proxy, instance.proxy);//不是bind而是call后续this会改？
+
                 patch(null, subTree, container, anchor)
-    if(m){
-        invokeArrayFns(m);
-    }
+                if (m) {
+                    invokeArrayFns(m);
+                }
                 instance.subTree = subTree;
                 instance.isMounted = true;
 
 
             } else {//组件内部更新
-                let { next,bu,u} = instance;
-                if(next){
+                let { next, bu, u } = instance;
+                if (next) {
                     //跟新前 我也需要拿到最新的属性来进行更新
-                    updateComponentPreRender(instance,next);
+                    updateComponentPreRender(instance, next);
                 }
-  if(bu){
-    invokeArrayFns(bu)
-  }
+                if (bu) {
+                    invokeArrayFns(bu)
+                }
 
-                const subTree = render.call(instance.proxy,instance.proxy);
-;
+                const subTree = render.call(instance.proxy, instance.proxy);
+                ;
                 patch(instance.subTree, subTree, container, anchor);
                 instance.subTree = subTree;
-                if(u){
+                if (u) {
                     invokeArrayFns(u);
                 }
 
@@ -363,9 +386,9 @@ export function createRenderer(renderOptions) {
     }
 
     const patch = (n1, n2, container, anchor = null) => {//核心的patch方法
-        
+        debugger
         if (n1 === n2) { return };
-        
+
         if (n1 && !isSameVnode(n1, n2)) {//判断两个vnode是否相同，不相同卸载再提交，
 
             unmount(n1);
@@ -376,6 +399,7 @@ export function createRenderer(renderOptions) {
         //初始化节点
         //后续还有组件的初次渲染，目前是元素的初始化渲染
         ;
+        
         switch (type) {
             case Text:
                 processText(n1, n2, container);
@@ -407,7 +431,7 @@ export function createRenderer(renderOptions) {
 
         } else {
             //这里既有初始化的逻辑，也有更新的逻辑
-            
+   
             patch(container._vnode || null, vnode, container)//这一行有点不懂，难道是默认这个container
             //只挂载一个虚拟节点吗？
         }
