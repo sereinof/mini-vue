@@ -270,7 +270,7 @@ export function createRenderer(renderOptions) {
                 if(bm){
                     invokeArrayFns(bm);
                 }
-                const subTree = render.call(instance.proxy);//不是bind而是call后续this会改？
+                const subTree = render.call(instance.proxy,instance.proxy);//不是bind而是call后续this会改？
                 
                 patch(null, subTree, container, anchor)
     if(m){
@@ -290,7 +290,7 @@ export function createRenderer(renderOptions) {
     invokeArrayFns(bu)
   }
 
-                const subTree = render.call(instance.proxy);
+                const subTree = render.call(instance.proxy,instance.proxy);
 ;
                 patch(instance.subTree, subTree, container, anchor);
                 instance.subTree = subTree;

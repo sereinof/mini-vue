@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script src="./runtime-dom.global.js"></script>
+    <script>
+        let { createRenderer,ref,openBlock,
+            createElementVnode,toDisplayString,createElementBlock,
+            h, render, Text, Fragment ,reactive} = VueRuntimeDOM;
+//组件的插槽是一个对象，放着映射关系，渲染组件的时候去映射表中查
+ 
+    const VueComponent = {
+        setup(){
+            const state = reactive({name:'xioayu'})
+            return {
+                state,
+            }
+        },
+        render(_ctx){
+           
+            let vnode = (openBlock(),
+            createElementBlock('div',null,
+             [
+                 createElementVnode('h1',null,'hellojiefg'),
+                  createElementVnode('span',null,toDisplayString(_ctx.state.name),1)
+                ])
+            )
+          console.log(vnode);
+          return vnode;
+        }
+    }
+        render(h(VueComponent),document.getElementById('app'));
+
+    </script>
+</body>
+
+</html>
