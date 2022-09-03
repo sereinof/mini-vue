@@ -2,7 +2,21 @@ var VueCompilerCore = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
   var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __getOwnPropSymbols = Object.getOwnPropertySymbols;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __propIsEnum = Object.prototype.propertyIsEnumerable;
+  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+  var __spreadValues = (a, b) => {
+    for (var prop in b || (b = {}))
+      if (__hasOwnProp.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
+    if (__getOwnPropSymbols)
+      for (var prop of __getOwnPropSymbols(b)) {
+        if (__propIsEnum.call(b, prop))
+          __defNormalProp(a, prop, b[prop]);
+      }
+    return a;
+  };
   var __export = (target, all) => {
     for (var name in all)
       __defProp(target, name, { get: all[name], enumerable: true });
@@ -123,12 +137,54 @@ var VueCompilerCore = (() => {
       advanceBy(context, match[0].length);
     }
   }
+  function parseAttributeValue(context) {
+    const start = getCursor(context);
+    let quote = context.source[0];
+    let content;
+    if (quote == '"' || quote === "'") {
+      advanceBy(context, 1);
+      const endIndex = context.source.indexOf(quote);
+      content = parseTextData(context, endIndex);
+      advanceBy(context, 1);
+    }
+    return {
+      content,
+      loc: getSelection(context, start)
+    };
+  }
+  function parseAttribute(context) {
+    const start = getCursor(context);
+    const match = /^[^\t\r\n\f />][^\t\r\n\f />=]*/.exec(context.source);
+    let name = match[0];
+    advanceBy(context, name.length);
+    advanceByspaces(context);
+    advanceBy(context, 1);
+    let value = parseAttributeValue(context);
+    return {
+      type: 6 /* ATTRIBUTE */,
+      name,
+      value: __spreadValues({
+        type: 2 /* TEXT */
+      }, value),
+      loc: getSelection(context, start)
+    };
+  }
+  function parseAttributes(context) {
+    const props = [];
+    while (context.source.length > 0 && !context.source.startsWith(">")) {
+      const prop = parseAttribute(context);
+      props.push(prop);
+      advanceByspaces(context);
+    }
+    return props;
+  }
   function parseTag(context) {
     const start = getCursor(context);
     const match = /^<\/?([a-z][^ \t\r\n/>]*)/.exec(context.source);
     const tag = match[1];
     advanceBy(context, match[0].length);
     advanceByspaces(context);
+    let props = parseAttributes(context);
     let isSelfCloseing = context.source.startsWith("/>");
     advanceBy(context, isSelfCloseing ? 2 : 1);
     return {
@@ -136,7 +192,8 @@ var VueCompilerCore = (() => {
       tag,
       isSelfCloseing,
       loc: getSelection(context, start),
-      children: []
+      children: [],
+      props
     };
   }
   function parseelement(context) {
@@ -165,11 +222,28 @@ var VueCompilerCore = (() => {
       }
       nodes.push(node);
     }
-    return nodes;
+    nodes.forEach((node, i) => {
+      if (node.type === 2 /* TEXT */) {
+        if (!/[^t\r\n\f ] /.test(node.content)) {
+          nodes[i] = null;
+        }
+        ;
+      }
+    });
+    return nodes.filter(Boolean);
   }
   function parse(template) {
     const context = createParserContext(template);
-    return parseChildren(context);
+    const start = getCursor(context);
+    let root = createRoot(parseChildren(context), getSelection(context, start));
+    return root;
+  }
+  function createRoot(nodes, loc) {
+    return {
+      type: 0 /* ROOT */,
+      children: nodes,
+      loc
+    };
   }
   function compile(template) {
     const ast = parse(template);

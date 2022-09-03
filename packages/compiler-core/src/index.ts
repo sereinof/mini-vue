@@ -121,6 +121,63 @@ function advanceByspaces(context){
   }
 }
 
+function parseAttributeValue(context){
+ const start = getCursor(context);
+ let quote = context.source[0];
+ let content;
+ if(quote=='"' ||quote==="'"){
+  advanceBy(context,1);
+  const endIndex = context.source.indexOf(quote);
+     content = parseTextData(context,endIndex);//这个方法经常服用
+    //简单说一下吧，就是给你一个上下文，并且给你一个结束索引文字，你给我把到这个结
+    //结束索引部分的值给消费掉，并且以字符的形式返回这个内容回来，
+    advanceBy(context,1)//消费右边的引号
+ }
+ return {
+  content,
+  loc:getSelection(context,start),
+ }
+
+
+}
+
+function parseAttribute(context){
+const start  = getCursor(context);
+const match = /^[^\t\r\n\f />][^\t\r\n\f />=]*/.exec(context.source);
+ let name = match[0];
+ advanceBy(context,name.length);//消费属性名
+
+ advanceByspaces(context);//消费出现的空格
+
+ advanceBy(context,1);//消费等号
+ //我只处理单双引号包裹的值
+ let value = parseAttributeValue(context);
+
+return {
+  type:NodeTypes.ATTRIBUTE,
+  name,
+  value:{
+    type:NodeTypes.TEXT,
+    ...value
+  },
+  loc:getSelection(context,start),
+}
+
+}
+
+ function parseAttributes(context){// a-1 b-2>
+const props = [];
+  while(context.source.length>0 && !context.source.startsWith('>')){
+    //在源码里面
+    const prop = parseAttribute(context);
+    props.push(prop);
+    advanceByspaces(context);
+  }
+
+
+return props;
+ }
+
 function parseTag(context){
   
   const start = getCursor(context);
@@ -129,6 +186,8 @@ function parseTag(context){
   advanceBy(context,match[0].length);//删除整个标签
   advanceByspaces(context);
 
+
+   let props =  parseAttributes(context);
   let isSelfCloseing = context.source.startsWith('/>');//自闭合标签？
   advanceBy(context,isSelfCloseing?2:1);
   return{
@@ -137,6 +196,7 @@ function parseTag(context){
     isSelfCloseing,
     loc:getSelection(context,start),
     children:[],
+    props,
   }
 }
 
@@ -175,7 +235,15 @@ let children = parseChildren(context);//处理儿子的时候可能没有儿子�
     nodes.push(node);
 
   }
-  return nodes;
+  nodes.forEach((node,i)=>{
+    if(node.type === NodeTypes.TEXT){
+     if(!/[^t\r\n\f ] /.test(node.content)){
+      nodes[i] = null;
+     }; 
+    }
+  })
+  
+  return nodes.filter(Boolean);
  }
 
 function parse(template) {
@@ -184,8 +252,19 @@ function parse(template) {
   // < 元素
   // {{}}说明表达式
   //其他就是文本
-   return parseChildren(context);
 
+  const start = getCursor(context)
+
+   let root = createRoot(parseChildren(context),getSelection(context,start))
+   
+return root
+}
+function createRoot(nodes,loc){
+   return {
+    type:NodeTypes.ROOT,//后续转换成vnode的时候就是fragment
+    children:nodes,
+    loc,
+   }
 }
 
 export function compile(template) {
