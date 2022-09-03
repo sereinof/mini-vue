@@ -88,6 +88,32 @@ var VueCompilerCore = (() => {
       loc: getSelection(context, start)
     };
   }
+  function parseInterpolation(context) {
+    const start = getCursor(context);
+    const closeIndex = context.source.indexOf("}}", 2);
+    advanceBy(context, 2);
+    const innerStart = getCursor(context);
+    const innerEnd = getCursor(context);
+    const rawContentLength = closeIndex - 2;
+    let preContent = parseTextData(context, rawContentLength);
+    let content = preContent.trim();
+    let startOffset = preContent.indexOf(content);
+    if (startOffset > 0) {
+      advancePositionWithMutation(innerStart, preContent, startOffset);
+    }
+    let endOffset = startOffset + content.length;
+    advancePositionWithMutation(innerEnd, preContent, endOffset);
+    advanceBy(context, 2);
+    return {
+      type: 5 /* INTERPOLATION */,
+      content: {
+        type: 4 /* SIMPLE_EXPRESSION */,
+        content,
+        loc: getSelection(context, innerStart, innerEnd)
+      },
+      loc: getSelection(context, start)
+    };
+  }
   function parse(template) {
     const context = createParserContext(template);
     const nodes = [];
@@ -95,7 +121,7 @@ var VueCompilerCore = (() => {
       const { source } = context;
       let node;
       if (source.startsWith("{{")) {
-        node = "";
+        node = parseInterpolation(context);
       } else if (source[0] === "<") {
         node = "";
       }
@@ -105,9 +131,11 @@ var VueCompilerCore = (() => {
       }
       nodes.push(node);
     }
+    return nodes;
   }
   function compile(template) {
     const ast = parse(template);
+    console.log(ast);
     console.log("fgvdfbdfbdf");
   }
   return __toCommonJS(src_exports);

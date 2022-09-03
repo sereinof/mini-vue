@@ -79,7 +79,35 @@ function parseText(context) {
     loc:getSelection(context,start),
   }
 }
+function parseInterpolation(context){//处理表达式的信息
+  const start = getCursor(context);
+  const closeIndex = context.source.indexOf('}}',2)//查找结束的大括号
+  advanceBy(context,2);
+  const innerStart = getCursor(context);
+  const innerEnd = getCursor(context);
+  //拿到原始的内容
+  const rawContentLength = closeIndex -2;//此时左边两个大括号已经被消费，在获取右边括号的索引就得到表达式里面代码字符的长度
+  let  preContent  =parseTextData(context,rawContentLength);//返回文本内容，实际是方法复用，但是这里的文本代表的是代码 
+  let content = preContent.trim();
+  let startOffset =  preContent.indexOf(content);//{{   CXXXX}}
 
+  if(startOffset>0){
+    advancePositionWithMutation(innerStart,preContent,startOffset)
+  }
+
+  let endOffset = startOffset + content.length;
+  advancePositionWithMutation(innerEnd,preContent,endOffset);//跟新innerEnd的行列信息
+   advanceBy(context,2)//此时里面的代码表达式信息已经获取 需要消费右边两个大括号
+   return{
+    type:NodeTypes.INTERPOLATION,//表达式
+    content:{
+      type:NodeTypes.SIMPLE_EXPRESSION,
+      content,
+      loc:getSelection(context,innerStart,innerEnd)
+    },
+    loc:getSelection(context,start)
+   }
+}
 function parse(template) {
   //创建一个解析的上下文，来进行处理 
   const context = createParserContext(template);
@@ -91,7 +119,7 @@ function parse(template) {
     const { source } = context;
     let node;
     if (source.startsWith('{{')) {
-      node = '';
+      node = parseInterpolation(context);
     } else if (source[0] === '<') {//标签
       node = ''
     }//文本
@@ -103,10 +131,12 @@ function parse(template) {
     nodes.push(node);
 
   }
+  return nodes
 }
 
 export function compile(template) {
   const ast = parse(template);//这里需要将html语法转换成javascript语法
+  console.log(ast);
   //对ast语法书尽心一些预先处理
 
   //Transform(ast);
