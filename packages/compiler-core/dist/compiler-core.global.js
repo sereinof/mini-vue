@@ -22,7 +22,89 @@ var VueCompilerCore = (() => {
   __export(src_exports, {
     compile: () => compile
   });
+  function createParserContext(template) {
+    return {
+      line: 1,
+      column: 1,
+      offset: 0,
+      source: template,
+      originalSource: template
+    };
+  }
+  function isEnd(context) {
+    const source = context.source;
+    return !source;
+  }
+  function getCursor(context) {
+    let { line, column, offset } = context;
+    return { line, column, offset };
+  }
+  function advancePositionWithMutation(context, source, endIndex) {
+    let lineCount = 0;
+    let linePos = -1;
+    for (let i = 0; i < endIndex; i++) {
+      if (source.charCodeAt(i) == 10) {
+        lineCount++;
+        linePos = i;
+      }
+    }
+    context.line += lineCount;
+    context.offset += endIndex;
+    context.column = linePos == -1 ? context.column + endIndex : endIndex - linePos;
+  }
+  function advanceBy(context, endIndex) {
+    let source = context.source;
+    advancePositionWithMutation(context, source, endIndex);
+    context.source = source.slice(endIndex);
+    console.log(context.source);
+  }
+  function parseTextData(context, endIndex) {
+    const rawText = context.source.slice(0, endIndex);
+    advanceBy(context, endIndex);
+    return rawText;
+  }
+  function getSelection(context, start, end) {
+    end = end || getCursor(context);
+    return {
+      start,
+      end,
+      source: context.originalSource.slice(start.offset, end.offset)
+    };
+  }
+  function parseText(context) {
+    let endTokens = ["<", "{{"];
+    let endIndex = context.source.length;
+    for (let i = 0; i < endTokens.length; i++) {
+      let index = context.source.indexOf(endTokens[i], 1);
+      if (index !== -1 && endIndex > index) {
+        endIndex = index;
+      }
+    }
+    const start = getCursor(context);
+    const content = parseTextData(context, endIndex);
+    return {
+      type: 2 /* TEXT */,
+      content,
+      loc: getSelection(context, start)
+    };
+  }
   function parse(template) {
+    const context = createParserContext(template);
+    const nodes = [];
+    while (!isEnd(context)) {
+      const { source } = context;
+      let node;
+      if (source.startsWith("{{")) {
+        node = "";
+      } else if (source[0] === "<") {
+        node = "";
+      }
+      if (!node) {
+        node = parseText(context);
+        console.log(node);
+      }
+      nodes.push(node);
+    }
   }
   function compile(template) {
     const ast = parse(template);
