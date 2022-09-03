@@ -13,6 +13,11 @@ function createParserContext(template: any) {
 
 function isEnd(context) {
   const source = context.source;
+if(context.source.startsWith('</')){
+  
+  return true;
+}
+
   return !source;//解析到最后一个字符串
 }
 function getCursor(context) {
@@ -108,12 +113,51 @@ function parseInterpolation(context){//处理表达式的信息
     loc:getSelection(context,start)
    }
 }
-function parse(template) {
-  //创建一个解析的上下文，来进行处理 
-  const context = createParserContext(template);
-  // < 元素
-  // {{}}说明表达式
-  //其他就是文本
+
+function advanceByspaces(context){
+  let match = /^[ \t\r\n]+/.exec(context.source);//这个正则干啥用的？匹配正则的？
+  if(match){
+    advanceBy(context,match[0].length);//消费空格；
+  }
+}
+
+function parseTag(context){
+  
+  const start = getCursor(context);
+  const match = /^<\/?([a-z][^ \t\r\n/>]*)/.exec(context.source)
+  const tag = match[1];
+  advanceBy(context,match[0].length);//删除整个标签
+  advanceByspaces(context);
+
+  let isSelfCloseing = context.source.startsWith('/>');//自闭合标签？
+  advanceBy(context,isSelfCloseing?2:1);
+  return{
+    type:NodeTypes.ELEMENT,
+    tag:tag,
+    isSelfCloseing,
+    loc:getSelection(context,start),
+    children:[],
+  }
+}
+
+function parseelement(context){
+//解析标签，这里面是比较复杂的，因为会涉及递归嵌套等等
+// <div> <br/>  </div>  
+ let ele =   parseTag(context);
+//这里需要插入处理儿子的逻辑了也是模版渲染里面最为复杂的部分了；
+let children = parseChildren(context);//处理儿子的时候可能没有儿子；
+
+ if(context.source.startsWith('</')){
+  //处理结束标签，这里处理的很简陋啊， 不考虑的里面嵌套元素以及不考虑里面有空格或者文字啥的
+  parseTag(context);//这里不需要返回值哦，直接给你干掉了
+ }
+ //更新行列信息
+ ele.loc = getSelection(context,ele.loc.start);
+ ele.children = children;
+ return ele;
+}
+//下面是一个递归方法
+  function parseChildren(context){
   const nodes = [];
   while (!isEnd(context)) {
     const { source } = context;
@@ -121,7 +165,7 @@ function parse(template) {
     if (source.startsWith('{{')) {
       node = parseInterpolation(context);
     } else if (source[0] === '<') {//标签
-      node = ''
+      node = parseelement(context);
     }//文本
     if (!node) {
       node = parseText(context);
@@ -131,7 +175,17 @@ function parse(template) {
     nodes.push(node);
 
   }
-  return nodes
+  return nodes;
+ }
+
+function parse(template) {
+  //创建一个解析的上下文，来进行处理 
+  const context = createParserContext(template);
+  // < 元素
+  // {{}}说明表达式
+  //其他就是文本
+   return parseChildren(context);
+
 }
 
 export function compile(template) {

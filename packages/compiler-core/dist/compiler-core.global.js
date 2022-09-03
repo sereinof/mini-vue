@@ -33,6 +33,9 @@ var VueCompilerCore = (() => {
   }
   function isEnd(context) {
     const source = context.source;
+    if (context.source.startsWith("</")) {
+      return true;
+    }
     return !source;
   }
   function getCursor(context) {
@@ -114,8 +117,39 @@ var VueCompilerCore = (() => {
       loc: getSelection(context, start)
     };
   }
-  function parse(template) {
-    const context = createParserContext(template);
+  function advanceByspaces(context) {
+    let match = /^[ \t\r\n]+/.exec(context.source);
+    if (match) {
+      advanceBy(context, match[0].length);
+    }
+  }
+  function parseTag(context) {
+    const start = getCursor(context);
+    const match = /^<\/?([a-z][^ \t\r\n/>]*)/.exec(context.source);
+    const tag = match[1];
+    advanceBy(context, match[0].length);
+    advanceByspaces(context);
+    let isSelfCloseing = context.source.startsWith("/>");
+    advanceBy(context, isSelfCloseing ? 2 : 1);
+    return {
+      type: 1 /* ELEMENT */,
+      tag,
+      isSelfCloseing,
+      loc: getSelection(context, start),
+      children: []
+    };
+  }
+  function parseelement(context) {
+    let ele = parseTag(context);
+    let children = parseChildren(context);
+    if (context.source.startsWith("</")) {
+      parseTag(context);
+    }
+    ele.loc = getSelection(context, ele.loc.start);
+    ele.children = children;
+    return ele;
+  }
+  function parseChildren(context) {
     const nodes = [];
     while (!isEnd(context)) {
       const { source } = context;
@@ -123,7 +157,7 @@ var VueCompilerCore = (() => {
       if (source.startsWith("{{")) {
         node = parseInterpolation(context);
       } else if (source[0] === "<") {
-        node = "";
+        node = parseelement(context);
       }
       if (!node) {
         node = parseText(context);
@@ -132,6 +166,10 @@ var VueCompilerCore = (() => {
       nodes.push(node);
     }
     return nodes;
+  }
+  function parse(template) {
+    const context = createParserContext(template);
+    return parseChildren(context);
   }
   function compile(template) {
     const ast = parse(template);
