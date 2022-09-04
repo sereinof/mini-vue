@@ -1,3 +1,4 @@
+import { generate } from "./generate";
 import { parse } from "./parse";
 import { transform } from "./transform";
 
@@ -9,9 +10,9 @@ export function compile(template) {
 
    transform(ast);
 
-   return ast;
 
-  //return generate(ast);
+
+  return generate(ast);//最终生成代码 和vue一样
 
 }
 

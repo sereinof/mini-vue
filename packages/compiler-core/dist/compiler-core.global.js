@@ -37,14 +37,24 @@ var VueCompilerCore = (() => {
     compile: () => compile
   });
 
+  // packages/compiler-core/src/generate.ts
+  function generate(ast) {
+  }
+
   // packages/compiler-core/src/runtimeHelpers.ts
   var TO_DISPLAY_STRING = Symbol("toDisplayString");
   var CREATE_TEXT = Symbol("createTextVNode");
   var CREATE_ELEMENT_VNODE = Symbol("createElementVnode");
+  var OPEN_BLOCK = Symbol("openBlock");
+  var CREATE_ELEMENT_BLOCK = Symbol("createElementBlock");
+  var FRAGMENT = Symbol("fragment");
   var helperMap = {
     [TO_DISPLAY_STRING]: "tiDsiplayString",
     [CREATE_TEXT]: "createTextVNode",
-    [CREATE_ELEMENT_VNODE]: "createElementVnode"
+    [CREATE_ELEMENT_VNODE]: "createElementVnode",
+    [OPEN_BLOCK]: "openBlock",
+    [CREATE_ELEMENT_BLOCK]: "createElementBlock",
+    [FRAGMENT]: "fragment"
   };
 
   // packages/compiler-core/src/ast.ts
@@ -386,6 +396,17 @@ var VueCompilerCore = (() => {
         context.helpers.set(name, count + 1);
         return name;
       },
+      removeHelper(name) {
+        const count = context.helpers.get(name);
+        if (count) {
+          const currentCount = count - 1;
+          if (!currentCount) {
+            context.helpers.delete(name);
+          } else {
+            context.helpers.set(name, currentCount);
+          }
+        }
+      },
       nodeTransforms: [
         transformElment,
         transformTxet,
@@ -422,9 +443,29 @@ var VueCompilerCore = (() => {
       exitsFns[i]();
     }
   }
+  function createRootCodegen(ast, context) {
+    let { children } = ast;
+    if (children.length === 1) {
+      const child = children[0];
+      if (child.type === 1 /* ELEMENT */ && child.codegenNode) {
+        ast.codegenNode = child.codegenNode;
+        context.removeHelper(CREATE_ELEMENT_VNODE);
+        context.helper(OPEN_BLOCK);
+        context.helper(CREATE_ELEMENT_BLOCK);
+        ast.codegenNode.isBlock = true;
+      } else {
+        ast.codegenNode = child.codegenNode;
+      }
+    } else {
+      ast.codegenNode = createVnodeCall(context, context.helper(FRAGMENT), null, children);
+    }
+  }
   function transform(ast) {
     const context = createTransformContext(ast);
     traverse(ast, context);
+    createRootCodegen(ast, context);
+    ast.helpers = [...context.helpers.keys()];
+    console.log(ast.helpers);
   }
 
   // packages/compiler-core/src/index.ts
@@ -432,7 +473,7 @@ var VueCompilerCore = (() => {
     const ast = parse(template);
     console.log(ast);
     transform(ast);
-    return ast;
+    return generate(ast);
   }
   return __toCommonJS(src_exports);
 })();
