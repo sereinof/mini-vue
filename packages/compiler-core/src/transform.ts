@@ -45,6 +45,7 @@ if(onExit){
         context.helper(TO_DISPLAY_STRING)
     case NodeTypes.ELEMENT:
     case NodeTypes.ROOT:
+        
       for(let i=0;i<node.children.length;i++){
         context.parent = node;
         traverse(node.children[i],context)

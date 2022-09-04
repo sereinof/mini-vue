@@ -110,7 +110,8 @@ function parseInterpolation(context){//处理表达式的信息
       content,
       loc:getSelection(context,innerStart,innerEnd)
     },
-    loc:getSelection(context,start)
+    loc:getSelection(context,start),
+    children:[],
    }
 }
 

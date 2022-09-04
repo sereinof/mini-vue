@@ -37,6 +37,24 @@ var VueCompilerCore = (() => {
     compile: () => compile
   });
 
+  // packages/compiler-core/src/runtimeHelpers.ts
+  var TO_DISPLAY_STRING = Symbol("toDisplayString");
+  var CREATE_TEXT = Symbol("createTextVNode");
+  var helperMap = {
+    [TO_DISPLAY_STRING]: "tiDsiplayString",
+    [CREATE_TEXT]: "createTextVNode"
+  };
+
+  // packages/compiler-core/src/ast.ts
+  function createCallExpression(context, args) {
+    let callee = context.helper(CREATE_TEXT);
+    return {
+      callee,
+      type: 14 /* JS_CALL_EXPRESS */,
+      arguments: args
+    };
+  }
+
   // packages/compiler-core/src/parse.ts
   function createParserContext(template) {
     return {
@@ -130,7 +148,8 @@ var VueCompilerCore = (() => {
         content,
         loc: getSelection(context, innerStart, innerEnd)
       },
-      loc: getSelection(context, start)
+      loc: getSelection(context, start),
+      children: []
     };
   }
   function advanceByspaces(context) {
@@ -248,12 +267,6 @@ var VueCompilerCore = (() => {
     };
   }
 
-  // packages/compiler-core/src/runtimeHelpers.ts
-  var TO_DISPLAY_STRING = Symbol("toDisplayString");
-  var helperMap = {
-    [TO_DISPLAY_STRING]: "tiDsiplayString"
-  };
-
   // packages/compiler-core/src/transforms/transformElement.ts
   function transformElment(node, contexts) {
     if (1 /* ELEMENT */ === node.type) {
@@ -270,10 +283,60 @@ var VueCompilerCore = (() => {
     }
   }
 
+  // packages/shared/src/index.ts
+  var isArray = Array.isArray;
+
   // packages/compiler-core/src/transforms/transformText.ts
-  function transformTxet(node, contexts) {
+  function isText(node) {
+    return node.type === 5 /* INTERPOLATION */ || node.type === 2 /* TEXT */;
+  }
+  function transformTxet(node, context) {
     if (node.type === 1 /* ELEMENT */ || node.type === 0 /* ROOT */) {
       return () => {
+        console.log("children", node.children);
+        let currentContainer = null;
+        let children = node.children;
+        let hasText = false;
+        for (let i = 0; i < children.length; i++) {
+          let child = children[i];
+          hasText = true;
+          if (isText(child)) {
+            for (let j = i + 1; j < children.length; j++) {
+              let next = children[j];
+              if (isText(next)) {
+                if (!currentContainer) {
+                  currentContainer = children[i] = {
+                    type: 8 /* COMPOUND_EXPRESSION */,
+                    children: [child]
+                  };
+                }
+                currentContainer.children.push("+", next);
+                children.splice(j, 1);
+              } else {
+                currentContainer = null;
+                break;
+              }
+            }
+          }
+        }
+        if (!hasText || children.length === 1) {
+          return;
+        }
+        for (let i = 0; i < children.length; i++) {
+          const child = children[i];
+          const callArgs = [];
+          if (isText(child) || child.type == 8 /* COMPOUND_EXPRESSION */) {
+            callArgs.push(child);
+            if (node.type !== 2 /* TEXT */) {
+              callArgs.push(1 /* TEXT */);
+            }
+            children[i] = {
+              type: 12 /* TEXT_CALL */,
+              content: child,
+              condegenNode: createCallExpression(context, "")
+            };
+          }
+        }
       };
     }
   }
@@ -335,6 +398,7 @@ var VueCompilerCore = (() => {
     const ast = parse(template);
     console.log(ast);
     transform(ast);
+    return ast;
   }
   return __toCommonJS(src_exports);
 })();

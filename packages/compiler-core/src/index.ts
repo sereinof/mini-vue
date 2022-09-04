@@ -7,7 +7,9 @@ export function compile(template) {
   console.log(ast);
   //对ast语法书尽心一些预先处理
 
-  transform(ast);
+   transform(ast);
+
+   return ast;
 
   //return generate(ast);
 
