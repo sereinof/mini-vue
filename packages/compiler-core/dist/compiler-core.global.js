@@ -40,9 +40,11 @@ var VueCompilerCore = (() => {
   // packages/compiler-core/src/runtimeHelpers.ts
   var TO_DISPLAY_STRING = Symbol("toDisplayString");
   var CREATE_TEXT = Symbol("createTextVNode");
+  var CREATE_ELEMENT_VNODE = Symbol("createElementVnode");
   var helperMap = {
     [TO_DISPLAY_STRING]: "tiDsiplayString",
-    [CREATE_TEXT]: "createTextVNode"
+    [CREATE_TEXT]: "createTextVNode",
+    [CREATE_ELEMENT_VNODE]: "createElementVnode"
   };
 
   // packages/compiler-core/src/ast.ts
@@ -52,6 +54,21 @@ var VueCompilerCore = (() => {
       callee,
       type: 14 /* JS_CALL_EXPRESS */,
       arguments: args
+    };
+  }
+  function createObjectExpression(properties) {
+    return {
+      type: 15 /* JS_OBJECT_EXPRESSION */,
+      properties
+    };
+  }
+  function createVnodeCall(context, vnodeTag, propsExpression, childrenNode) {
+    let callee = context.helper(CREATE_ELEMENT_VNODE);
+    return {
+      type: 13 /* VNODE_CALL */,
+      tag: vnodeTag,
+      props: propsExpression,
+      children: childrenNode
     };
   }
 
@@ -268,9 +285,26 @@ var VueCompilerCore = (() => {
   }
 
   // packages/compiler-core/src/transforms/transformElement.ts
-  function transformElment(node, contexts) {
+  function transformElment(node, context) {
     if (1 /* ELEMENT */ === node.type) {
       return () => {
+        let vnodeTag = `"${node.tag}"`;
+        let preperties = [];
+        let props = node.props;
+        for (let i = 0; i < props.length; i++) {
+          preperties.push({
+            key: props[i].name,
+            value: props[i].value.content
+          });
+        }
+        const propsExpression = preperties.length > 0 ? createObjectExpression(preperties) : null;
+        let childrenNode = null;
+        if (node.children.length === 1) {
+          const childrenNode2 = node.children[0];
+        } else if (node.children.length > 1) {
+          childrenNode = node.children;
+        }
+        node.codegenNode = createVnodeCall(context, vnodeTag, propsExpression, childrenNode);
       };
     }
   }

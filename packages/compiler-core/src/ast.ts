@@ -1,4 +1,4 @@
-import { CREATE_TEXT } from "./runtimeHelpers";
+import { CREATE_ELEMENT_VNODE, CREATE_TEXT } from "./runtimeHelpers";
 
 export const enum NodeTypes {
 ROOT,//跟节点
@@ -18,6 +18,7 @@ TEXT_CALL,//文本调用
 //codegen
 VNODE_CALL,//元素调用
 JS_CALL_EXPRESS,//js调用表达式
+JS_OBJECT_EXPRESSION,
 }
 export function createCallExpression(context,args){
    let callee =  context.helper(CREATE_TEXT);
@@ -26,4 +27,21 @@ export function createCallExpression(context,args){
     type:NodeTypes.JS_CALL_EXPRESS,
     arguments:args,
    }
+}
+export function createObjectExpression(properties){
+    
+    return {
+      type:NodeTypes.JS_OBJECT_EXPRESSION,
+      properties,
+    }
+
+}
+export function createVnodeCall(context,vnodeTag,propsExpression,childrenNode){
+       let callee =context.helper(CREATE_ELEMENT_VNODE);
+       return {
+    type:NodeTypes.VNODE_CALL,
+    tag:vnodeTag,
+    props:propsExpression,
+    children:childrenNode,
+       }
 }
