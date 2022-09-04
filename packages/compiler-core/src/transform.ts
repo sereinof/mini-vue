@@ -86,11 +86,15 @@ function createRootCodegen(ast, context) {
         ast.codegenNode.isBlock = true;//
 
         }else{
-            ast.codegenNode = child.codegenNode;
+            ast.codegenNode = child;
 
         }
     } else {
+        if(children.length ===0) return;
         ast.codegenNode = createVnodeCall(context,context.helper(FRAGMENT),null,children);
+        context.helper(OPEN_BLOCK);
+        context.helper(CREATE_ELEMENT_BLOCK);
+        ast.codegenNode.isBlock = true;// 
     }
 
 }

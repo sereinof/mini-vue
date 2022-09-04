@@ -37,45 +37,6 @@ var VueCompilerCore = (() => {
     compile: () => compile
   });
 
-  // packages/compiler-core/src/generate.ts
-  function createCodegenContext(ast) {
-    const context = {
-      code: "",
-      push(code) {
-        context.code = context.code + code;
-      },
-      indentLevel: 0,
-      indent() {
-        ++context.indentLevel;
-        context.newLine();
-      },
-      deindent(whithoutNewLine = false) {
-        if (whithoutNewLine) {
-          --context.indentLevel;
-        } else {
-          --context.indentLevel;
-          context.newLine();
-        }
-      },
-      newLine() {
-        newLine(context.indentLevel);
-      }
-    };
-    return context;
-    function newLine(n) {
-      context.push("\n" + "   ".repeat(n));
-    }
-  }
-  function generate(ast) {
-    const context = createCodegenContext(ast);
-    context.push("var a = 1");
-    context.indent();
-    context.push("var b = 3");
-    context.deindent();
-    context.push("var v = 444");
-    console.log(context.code);
-  }
-
   // packages/compiler-core/src/runtimeHelpers.ts
   var TO_DISPLAY_STRING = Symbol("toDisplayString");
   var CREATE_TEXT = Symbol("createTextVNode");
@@ -84,7 +45,7 @@ var VueCompilerCore = (() => {
   var CREATE_ELEMENT_BLOCK = Symbol("createElementBlock");
   var FRAGMENT = Symbol("fragment");
   var helperMap = {
-    [TO_DISPLAY_STRING]: "tiDsiplayString",
+    [TO_DISPLAY_STRING]: "toDisplayString",
     [CREATE_TEXT]: "createTextVNode",
     [CREATE_ELEMENT_VNODE]: "createElementVnode",
     [OPEN_BLOCK]: "openBlock",
@@ -115,6 +76,89 @@ var VueCompilerCore = (() => {
       props: propsExpression,
       children: childrenNode
     };
+  }
+
+  // packages/compiler-core/src/generate.ts
+  function createCodegenContext(ast) {
+    const context = {
+      code: "",
+      helper(name) {
+        return `${helperMap[name]}`;
+      },
+      push(code) {
+        context.code = context.code + code;
+      },
+      indentLevel: 0,
+      indent() {
+        ++context.indentLevel;
+        context.newLine();
+      },
+      deindent(whithoutNewLine = false) {
+        if (whithoutNewLine) {
+          --context.indentLevel;
+        } else {
+          --context.indentLevel;
+          context.newLine();
+        }
+      },
+      newLine() {
+        newLine(context.indentLevel);
+      }
+    };
+    return context;
+    function newLine(n) {
+      context.push("\n" + "   ".repeat(n));
+    }
+  }
+  function genFunctionPreable(ast, context) {
+    if (ast.helpers.length > 0) {
+      context.push(`import{ ${ast.helpers.map((h) => `${context.helper(h)} as ${context.helper(h)}`).join(",")} } from "vue" `);
+      context.newLine();
+    }
+    context.push(`export  `);
+  }
+  function genInterPolation(node, context) {
+    context.push(`${helperMap[TO_DISPLAY_STRING]}(`);
+    genNode(node.content, context);
+    context.push(")");
+  }
+  function genText(node, context) {
+    context.push(JSON.stringify(node.content));
+  }
+  function genExpression(node, context) {
+    context.push(node.content);
+  }
+  function genNode(node, context) {
+    switch (node.type) {
+      case 2 /* TEXT */:
+        genText(node, context);
+        break;
+      case 5 /* INTERPOLATION */:
+        genInterPolation(node, context);
+        break;
+      case 4 /* SIMPLE_EXPRESSION */:
+        genExpression(node, context);
+        break;
+    }
+  }
+  function generate(ast) {
+    const context = createCodegenContext(ast);
+    const { push, indent, deindent } = context;
+    genFunctionPreable(ast, context);
+    const functionName = "render  ";
+    const args = ["_ctx", "_cache", "$props"];
+    push(`function ${functionName}(${args.join(",")}){`);
+    indent();
+    push("return ");
+    debugger;
+    if (ast.codegenNode) {
+      genNode(ast.codegenNode, context);
+    } else {
+      push("null");
+    }
+    deindent();
+    push("}");
+    console.log(context.code);
   }
 
   // packages/compiler-core/src/parse.ts
@@ -489,10 +533,15 @@ var VueCompilerCore = (() => {
         context.helper(CREATE_ELEMENT_BLOCK);
         ast.codegenNode.isBlock = true;
       } else {
-        ast.codegenNode = child.codegenNode;
+        ast.codegenNode = child;
       }
     } else {
+      if (children.length === 0)
+        return;
       ast.codegenNode = createVnodeCall(context, context.helper(FRAGMENT), null, children);
+      context.helper(OPEN_BLOCK);
+      context.helper(CREATE_ELEMENT_BLOCK);
+      ast.codegenNode.isBlock = true;
     }
   }
   function transform(ast) {

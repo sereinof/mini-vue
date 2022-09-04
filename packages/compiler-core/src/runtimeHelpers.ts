@@ -5,7 +5,7 @@ export const OPEN_BLOCK = Symbol('openBlock');
 export const CREATE_ELEMENT_BLOCK = Symbol('createElementBlock');
 export const FRAGMENT = Symbol('fragment');
 export const helperMap = {
-    [TO_DISPLAY_STRING]:'tiDsiplayString',
+    [TO_DISPLAY_STRING]:'toDisplayString',
     [CREATE_TEXT] :'createTextVNode',
     [CREATE_ELEMENT_VNODE]:'createElementVnode',
     [OPEN_BLOCK]:'openBlock',

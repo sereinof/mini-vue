@@ -7,13 +7,11 @@
     <title>Document</title>
 </head>
 <body>
-    <script  src="./compiler-core.global.js">
-
-    </script>
+    <script src="./reactivity.global.js"></script>
     <script>
-        const {compile} = VueCompilerCore;
-      let r =   compile(`{{fgr}}`);
-      console.log(r);
-    </script>
+        //声明了响应式的数据，数据在effect中使用，就会有一个依赖 收集的过程
+  //effect.stop()只能停止某一个effect
+  //effectScope需要收集对应的effect();
+  </script>
 </body>
 </html>
