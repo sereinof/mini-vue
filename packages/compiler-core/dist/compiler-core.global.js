@@ -38,7 +38,42 @@ var VueCompilerCore = (() => {
   });
 
   // packages/compiler-core/src/generate.ts
+  function createCodegenContext(ast) {
+    const context = {
+      code: "",
+      push(code) {
+        context.code = context.code + code;
+      },
+      indentLevel: 0,
+      indent() {
+        ++context.indentLevel;
+        context.newLine();
+      },
+      deindent(whithoutNewLine = false) {
+        if (whithoutNewLine) {
+          --context.indentLevel;
+        } else {
+          --context.indentLevel;
+          context.newLine();
+        }
+      },
+      newLine() {
+        newLine(context.indentLevel);
+      }
+    };
+    return context;
+    function newLine(n) {
+      context.push("\n" + "   ".repeat(n));
+    }
+  }
   function generate(ast) {
+    const context = createCodegenContext(ast);
+    context.push("var a = 1");
+    context.indent();
+    context.push("var b = 3");
+    context.deindent();
+    context.push("var v = 444");
+    console.log(context.code);
   }
 
   // packages/compiler-core/src/runtimeHelpers.ts
