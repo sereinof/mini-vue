@@ -1,3 +1,5 @@
+import { recordEffectScope } from "./effectScope";
+
 export let activeEffevt = undefined;//注意这个变量是十分动态的，十分活跃的
 function cleanupEffect(effect) {
     const { deps } = effect;
@@ -15,6 +17,8 @@ function cleanupEffect(effect) {
     active = true;//这个effect默认是激活状态
     constructor(public fn, public scheduler?) {
 
+
+        recordEffectScope(this);
     };
     //不得不说，下面这个run方法实在是太精辟了，实现了数据变的时候，回去渲染页面，至此，对于响应式的原理又深入了一步
     //等等，数据变得时候去执行run方法，数据变得化是去出发set。set是属性和代理处理，如何获得对应的effect？估计又内存结构

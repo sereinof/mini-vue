@@ -9,9 +9,25 @@
 <body>
     <script src="./reactivity.global.js"></script>
     <script>
+        const {reactive,effect,effectScope} = VueReactivity;
         //声明了响应式的数据，数据在effect中使用，就会有一个依赖 收集的过程
   //effect.stop()只能停止某一个effect
   //effectScope需要收集对应的effect();
+  const state = reactive({name:'zf'});
+  let scope = effectScope();
+  scope.run(()=>{
+    effect(()=>{
+        console.log(state.name)
+    })
+    effect(()=>{
+        console.log(state.name)
+    })
+  })
+
+  scope.stop();
+  setTimeout(() => {
+    state.name = 'jggjjg'
+  }, 1000);
   </script>
 </body>
 </html>
