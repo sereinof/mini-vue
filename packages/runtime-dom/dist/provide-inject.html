@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id ="app"></div>
+    <script src="./runtime-dom.global.js"></script>
+
+    <script>
+        //provide和inject就是为了实现跨级通信的
+        //在我们组件库中，想跨级通信，那么就采用provide/inject
+        //实现原理？ 使用情况只能是父亲=》子=》孙子=》曾孙
+        //具体实在父组件上增加了一个provides属性，当调用provide时候会向属性中存值
+        //在渲染子组件的时候会将父组件的provides放在自己的身上
+        //provide和inject方法只能在setup中使用，这点和生命周期函数倒是一致
+        const  {setup,getcurrentInstance,reactive,h,render,inject,provide} = VueRuntimeDOM
+        console.log(VueRuntimeDOM);
+        const My ={
+            setup(){
+                let instance = getcurrentInstance();
+                let state = inject('VueComponent');
+                console.log(state)
+                console.log(instance.parent)
+                return {
+                    state
+                }
+            },
+            render(){
+                return h('h1',this.state.name)
+            }
+        }
+        const VueComponent = {
+            setup(){
+                const state = reactive({name:'fefe'})
+               provide('VueComponent',state)
+            },
+            render(){
+                return h(My )
+             }
+            
+        }
+        render(h(VueComponent),app)
+    </script>
+    
+</body>
+</html>

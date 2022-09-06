@@ -27,14 +27,14 @@ export function createRenderer(renderOptions) {
         return children[i];
     }
 
-    const mountChildren = (children, container) => {
+    const mountChildren = (children, container,parentComponet) => {
         for (let i = 0; i < children.length; i++) {
             let child = normalize(children, i);//处理后要进行替换，否则children中存放的依旧是那个字符串
-            patch(null, child, container);
+            patch(null, child, container,parentComponet);
         }
     }
 
-    function mountElement(vnode, container, anchor) {
+    function mountElement(vnode, container, anchor,parentComponet) {
         
         let { type, props, children, shapeFlag } = vnode;
         vnode.el = hostCreateElenment(type);//将真实元素挂在到这个虚拟节点上，后续用于复用节点
@@ -48,7 +48,7 @@ export function createRenderer(renderOptions) {
         if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {//文本
             hostSetElementText(el, children)
         } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-            mountChildren(children, el);
+            mountChildren(children, el,parentComponet);
         }
         hostInsert(el, container, anchor);
     }
@@ -188,7 +188,7 @@ export function createRenderer(renderOptions) {
     }
 
     //下面这个方法名字打错了， 但是可以理解为是一个全量diff算法
-    const patchChildren = (n1, n2, el) => {
+    const patchChildren = (n1, n2, el,parentComponet) => {
         //刚刚说漏了，这里才是最精彩的部分
         const c1 = n1.children;
         const c2 = n2.children;
@@ -220,20 +220,20 @@ export function createRenderer(renderOptions) {
                     hostSetElementText(el, '');
                 }
                 if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-                    mountChildren(c2, el);
+                    mountChildren(c2, el,parentComponet);
                 }
             }
 
         }
     }
 
-    const patchBlockChildren = (n1, n2)=>{
+    const patchBlockChildren = (n1, n2,parentComponet)=>{
         for (let i = 0; i < n2.dynamicChildren.length; i++) {
-            patchElement(n1.dynamicChildren[i], n2.dynamicChildren[i]);
+            patchElement(n1.dynamicChildren[i], n2.dynamicChildren[i],parentComponet);
         }
     }
 
-    const patchElement = (n1, n2, container?) => {
+    const patchElement = (n1, n2,parentComponet) => {
         let el = n2.el = n1.el;//居然进来比对了 当然要复用节点
         let oladProps = n1.props || {};
         let newProps = n2.props || {};
@@ -253,26 +253,26 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
 
         if (n2.dynamicChildren) {
             
-            patchBlockChildren(n1, n2)
+            patchBlockChildren(n1, n2,parentComponet)
         } else {
-            patchChildren(n1, n2, el);
+            patchChildren(n1, n2, el,parentComponet);
         }
 
     }
 
-    const processElement = (n1, n2, container, anchor) => {
+    const processElement = (n1, n2, container, anchor,parentComponet) => {
         if (n1 === null) {
-            mountElement(n2, container, anchor)
+            mountElement(n2, container, anchor,parentComponet)
         } else {
 
             patchElement(n1, n2, container)//这里估计是重头戏里面的重头戏了，就是元素比对
         }
     }
-    const processFragment = (n1, n2, container, anchor) => {
+    const processFragment = (n1, n2, container, anchor,parentComponet) => {
         if (n1 == null) {
-            mountChildren(n2.children, container)
+            mountChildren(n2.children, container,parentComponet)
         } else {
-            patchChildren(n1, n2, container);//走了是两个数组情况的diff算法
+            patchChildren(n1, n2, container,parentComponet);//走了是两个数组情况的diff算法
         }
     }
     const updateComponentPreRender = (instance, next) => {
@@ -295,7 +295,7 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
                 }
                 const subTree = render.call(instance.proxy, instance.proxy);//不是bind而是call后续this会改？
 
-                patch(null, subTree, container, anchor)
+                patch(null, subTree, container, anchor,instance)
                 if (m) {
                     invokeArrayFns(m);
                 }
@@ -315,7 +315,7 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
 
                 const subTree = render.call(instance.proxy, instance.proxy);
                 ;
-                patch(instance.subTree, subTree, container, anchor);
+                patch(instance.subTree, subTree, container, anchor,instance);
                 instance.subTree = subTree;
                 if (u) {
                     invokeArrayFns(u);
@@ -331,13 +331,13 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
         update();
     }
 
-    const mountComponent = (vnode, container, anchor) => {
+    const mountComponent = (vnode, container, anchor,parentComponet) => {
 
         //此方法代码十分冗余需要改写
         //1）创建一个实例
         //2）给实例赋值
         //3）创建一个effect
-        let instance = vnode.component = createComponentInstance(vnode);
+        let instance = vnode.component = createComponentInstance(vnode,parentComponet);
 
         //给实例赋值
         setupComponet(instance);
@@ -377,15 +377,15 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
 
     }
 
-    const processCommponent = (n1, n2, container, anchor) => {
+    const processCommponent = (n1, n2, container, anchor,parentComponet) => {
         if (n1 == null) {
-            mountComponent(n2, container, anchor)
+            mountComponent(n2, container, anchor,parentComponet)
         } else {//组件更新靠的是props
             undateComponent(n1, n2,)
         }
     }
 
-    const patch = (n1, n2, container, anchor = null) => {//核心的patch方法
+    const patch = (n1, n2, container, anchor = null,parentComponet=null) => {//核心的patch方法
         debugger
         if (n1 === n2) { return };
 
@@ -405,13 +405,13 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
                 processText(n1, n2, container);
                 break;
             case Fragment:
-                processFragment(n1, n2, container, anchor);
+                processFragment(n1, n2, container, anchor,parentComponet);
                 break;
             default:
                 if (shapeFlag & ShapeFlags.ELEMENT) {
-                    processElement(n1, n2, container, anchor);
+                    processElement(n1, n2, container, anchor,parentComponet);
                 } else if (shapeFlag & ShapeFlags.COMPONEBT) {
-                    processCommponent(n1, n2, container, anchor)
+                    processCommponent(n1, n2, container, anchor,parentComponet)
                 }
         }
 
