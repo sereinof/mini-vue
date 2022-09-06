@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id ='app'></div>
+    <div id ='root'></div>
+    <div id ='kgkg'></div>
+    <script src="./runtime-dom.global.js"></script>
+    <script>
+    const  {setup,Teleport,getcurrentInstance,reactive,h,render,inject,ref,provide,Text} = VueRuntimeDOM;
+  
+  const VueComponent = {
+    setup(){
+       // const flag =ref(true);//目前看ref方式的响应式有问题
+       const flag = reactive({name:true})//还好reactive方式是没有问题的
+        const handleClick = ()=>{
+ flag.name = false;
+ console.log('fefgergggg')
+        }
+        return{
+            flag,handleClick
+        }
+
+    },
+    render(){
+       
+debugger
+        return h('button',{onClick:this.handleClick},this.flag.name?h(Teleport,{to:'#root'},[h(Text,null,'frgrf')]):h(Teleport,{to:'#kgkg'},[h(Text,null,"gegrgf")]))
+        //破案了，原来是我写的h方法有bug
+    }
+  }
+  render(h(VueComponent),app);
+</script>
+</body>
+</html>

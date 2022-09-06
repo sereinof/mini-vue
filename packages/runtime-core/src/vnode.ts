@@ -1,4 +1,5 @@
 import { isArray, isObject, isString, ShapeFlags } from "@vue/shared";
+import { isTeleport } from "./components/Teleport";
  export const Text = Symbol('Text');
  export const Fragment = Symbol('Ftagment');
  //vue3组件不需要一个根标签就是基于这个fragment实现的
@@ -13,7 +14,9 @@ export function isSameVnode(n1,n2){//判断两个虚拟节点是不，套路是1
 export function createVnode(type, props, children=null,patchFlag=0) {
     //组合方案，shapeFlag 想知道一个元素中包含的是多个儿子，还是一个儿子；
 
-    let shapeFlag = isString(type) ? ShapeFlags.ELEMENT : isObject(type)?ShapeFlags.STATEFUL_COMPONENT: 0;
+    let shapeFlag = isString(type) ? ShapeFlags.ELEMENT :
+    isTeleport(type)?ShapeFlags.TELEPORT: 
+    isObject(type)?ShapeFlags.STATEFUL_COMPONENT: 0;
     const vnode = {
         type,
         props,

@@ -386,7 +386,7 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
     }
 
     const patch = (n1, n2, container, anchor = null,parentComponet=null) => {//核心的patch方法
-        debugger
+        
         if (n1 === n2) { return };
 
         if (n1 && !isSameVnode(n1, n2)) {//判断两个vnode是否相同，不相同卸载再提交，
@@ -412,6 +412,15 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
                     processElement(n1, n2, container, anchor,parentComponet);
                 } else if (shapeFlag & ShapeFlags.COMPONEBT) {
                     processCommponent(n1, n2, container, anchor,parentComponet)
+                }else if(shapeFlag& ShapeFlags.TELEPORT){
+                    
+                     type.process(n1, n2, container, anchor,{
+                        mountChildren,
+                        patchChildren,
+                        move(vnode,container,anchor){
+                            hostInsert(vnode.component? vnode.component.subTree.el:vnode.el,container,anchor);
+                        }
+                     });
                 }
         }
 

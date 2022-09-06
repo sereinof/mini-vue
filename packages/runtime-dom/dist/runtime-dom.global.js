@@ -23,6 +23,7 @@ var VueRuntimeDOM = (() => {
     Fragment: () => Fragment,
     LifecycleHooks: () => LifecycleHooks,
     ReactiveEffect: () => ReactiveEffect,
+    Teleport: () => TelportImpl,
     Text: () => Text,
     activeEffectScope: () => activeEffectScope,
     activeEffevt: () => activeEffevt,
@@ -612,6 +613,30 @@ var VueRuntimeDOM = (() => {
     return result;
   }
 
+  // packages/runtime-core/src/components/Teleport.ts
+  var TelportImpl = {
+    __isTeleport: true,
+    process(n1, n2, container, anchor, internals) {
+      debugger;
+      let { mountChildren, patchChildren, move } = internals;
+      if (!n1) {
+        const target = document.querySelector(n2.props.to);
+        if (target) {
+          mountChildren(n2.children, target);
+        }
+      } else {
+        patchChildren(n1, n2, container);
+        if (n2.props.to !== n1.props.to) {
+          const nextTarget = document.querySelector(n2.props.to);
+          n2.children.forEach((child) => {
+            move(child, nextTarget, anchor);
+          });
+        }
+      }
+    }
+  };
+  var isTeleport = (type) => type.__isTeleport;
+
   // packages/runtime-core/src/vnode.ts
   var Text = Symbol("Text");
   var Fragment = Symbol("Ftagment");
@@ -622,7 +647,7 @@ var VueRuntimeDOM = (() => {
     return n1.type === n2.type && n1.key === n2.key;
   }
   function createVnode(type, props, children = null, patchFlag = 0) {
-    let shapeFlag = isString(type) ? 1 /* ELEMENT */ : isObject(type) ? 4 /* STATEFUL_COMPONENT */ : 0;
+    let shapeFlag = isString(type) ? 1 /* ELEMENT */ : isTeleport(type) ? 64 /* TELEPORT */ : isObject(type) ? 4 /* STATEFUL_COMPONENT */ : 0;
     const vnode = {
       type,
       props,
@@ -951,7 +976,6 @@ var VueRuntimeDOM = (() => {
       }
     };
     const patch = (n1, n2, container, anchor = null, parentComponet = null) => {
-      debugger;
       if (n1 === n2) {
         return;
       }
@@ -974,6 +998,14 @@ var VueRuntimeDOM = (() => {
             processElement(n1, n2, container, anchor, parentComponet);
           } else if (shapeFlag & 6 /* COMPONEBT */) {
             processCommponent(n1, n2, container, anchor, parentComponet);
+          } else if (shapeFlag & 64 /* TELEPORT */) {
+            type.process(n1, n2, container, anchor, {
+              mountChildren,
+              patchChildren,
+              move(vnode, container2, anchor2) {
+                hostInsert(vnode.component ? vnode.component.subTree.el : vnode.el, container2, anchor2);
+              }
+            });
           }
       }
     };
