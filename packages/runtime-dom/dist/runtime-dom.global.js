@@ -34,6 +34,7 @@ var VueRuntimeDOM = (() => {
     createRenderer: () => createRenderer,
     createVnode: () => createVnode,
     currentInstance: () => currentInstance,
+    defineAsyncComponent: () => defineAsyncComponent,
     effect: () => effect,
     effectScope: () => effectScope,
     getcurrentInstance: () => getcurrentInstance,
@@ -1010,6 +1011,9 @@ var VueRuntimeDOM = (() => {
       }
     };
     const unmount = (vnode) => {
+      if (vnode.type == Fragment) {
+        return unmountChildren(vnode);
+      }
       hostRemove(vnode.el);
     };
     const render2 = (vnode, container) => {
@@ -1097,6 +1101,26 @@ var VueRuntimeDOM = (() => {
     if (provides && key in provides) {
       return provides[key];
     }
+  }
+
+  // packages/runtime-core/src/defineAsyncComponent.ts
+  function defineAsyncComponent(loader) {
+    return {
+      setup() {
+        const loaded = reactive({ flag: false });
+        let Comp = reactive({ n: null });
+        loader().then((c) => {
+          console.log(c);
+          Comp.n = c;
+          console.log(loaded);
+          loaded.flag = true;
+        });
+        return { loaded, Comp };
+      },
+      render() {
+        return this.loaded.flag ? h(this.Comp.n, null, "") : h("div", null, "gtg");
+      }
+    };
   }
 
   // packages/runtime-dom/src/nodeOps.ts
