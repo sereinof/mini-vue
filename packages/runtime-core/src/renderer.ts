@@ -428,6 +428,8 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
     const unmount = (vnode) => {
         if(vnode.type==Fragment){
             return unmountChildren(vnode)
+        }else if(vnode.shapeFlag &ShapeFlags.COMPONEBT){
+            return unmount(vnode.component.subTree)
         }
         hostRemove(vnode.el);
     }
