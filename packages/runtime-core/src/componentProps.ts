@@ -1,5 +1,5 @@
 import { reactive } from "@vue/reactivity";
-import { hasOwn } from "@vue/shared";
+import { hasOwn, ShapeFlags } from "@vue/shared";
 
 export function initProps(instance, rawProps) {//后面参数表示用户传的
     const props = {};
@@ -19,6 +19,11 @@ export function initProps(instance, rawProps) {//后面参数表示用户传的
     //这里的props不希望在组件内部被更改。但是props得是响应式的，因为后续属性变化了更新的师徒
     instance.props = reactive(props);//源码里面用的shallowreactive
     instance.attrs = attrs;
+
+    //props是组件中的，如果是函数事组件，应该用attires作为props
+    if(instance.vnode.shapeFlag& ShapeFlags.FUNCTIONAL_COMPONENT){
+        instance.props = instance.attrs;
+    }
 }
 export const hasPropsChanged = (prevProps = {}, nextProps = {}) => {
     const nextKeys = Object.keys(nextProps);

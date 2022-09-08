@@ -1,7 +1,7 @@
 import { reactive, ReactiveEffect } from "@vue/reactivity";
 import { hasOwn, invokeArrayFns, isNumber, isString, PatchFlags, ShapeFlags } from "@vue/shared";
 import { patchClass } from "packages/runtime-dom/src/modules/class"
-import { createComponentInstance, setupComponet } from "./component";
+import { createComponentInstance, renderComponent, setupComponet } from "./component";
 import { hasPropsChanged, initProps, updateProps } from "./componentProps";
 import { queueJob } from "./scheduler";
 import { getSequence } from "./sequence";
@@ -283,7 +283,7 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
 
     const setupRenderEffect = (instance, container, anchor) => {
 
-        const { render } = instance;
+        const { render,vnode } = instance;
         ;
         const componentUpdateFn = () => {//区分是初始化还是更新
             if (!instance.isMounted) {//初始化
@@ -293,7 +293,7 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
                 if (bm) {
                     invokeArrayFns(bm);
                 }
-                const subTree = render.call(instance.proxy, instance.proxy);//不是bind而是call后续this会改？
+                const subTree = renderComponent(instance);//不是bind而是call后续this会改？
 
                 patch(null, subTree, container, anchor,instance)
                 if (m) {
@@ -313,7 +313,7 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
                     invokeArrayFns(bu)
                 }
 
-                const subTree = render.call(instance.proxy, instance.proxy);
+                const subTree = renderComponent(instance);
                 ;
                 patch(instance.subTree, subTree, container, anchor,instance);
                 instance.subTree = subTree;

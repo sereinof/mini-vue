@@ -3,11 +3,11 @@ import { hasOwn, isFunction, isObject, ShapeFlags } from "@vue/shared";
 import { initProps } from "./componentProps";
 
 export let currentInstance = null;
-export const setcurrentInstance=(instance)=>currentInstance =instance
-export const getcurrentInstance = ()=>currentInstance;
-export function createComponentInstance(vnode,parent) {
+export const setcurrentInstance = (instance) => currentInstance = instance
+export const getcurrentInstance = () => currentInstance;
+export function createComponentInstance(vnode, parent) {
     const instance = {//组件的实例
-        provides:parent? parent.provides:Object.create(null),//所有的组件用的都是父亲的provides
+        provides: parent ? parent.provides : Object.create(null),//所有的组件用的都是父亲的provides
         parent,
         data: null,
         vnode,
@@ -28,7 +28,7 @@ export function createComponentInstance(vnode,parent) {
 
 const publicPropertyMap = {
     $attrs: (i) => i.attrs,
-    $slots:(i)=>i.slots,
+    $slots: (i) => i.slots,
 }
 const publicInstanceProxy = {
     get(target, key) {
@@ -47,7 +47,7 @@ const publicInstanceProxy = {
         //访问这个映射表里面的属性
         //用户写的模版最终要变成render函数，而模版里的this恰恰就是这个代理对象
         if (getter) {
-            
+
             return getter(target);
 
         }
@@ -70,17 +70,17 @@ const publicInstanceProxy = {
     }
 }
 
-function initSlots(instance,children){
-if(instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN){
-     instance.slots = children;
-}
+function initSlots(instance, children) {
+    if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
+        instance.slots = children;
+    }
 }
 
 export function setupComponet(instance) {
 
-    let { props, type ,children} = instance.vnode;
+    let { props, type, children } = instance.vnode;
     initProps(instance, props);
-    initSlots(instance,children);//初始化插槽
+    initSlots(instance, children);//初始化插槽
 
     instance.proxy = new Proxy(instance, publicInstanceProxy);
     let data = type.data;
@@ -102,8 +102,8 @@ export function setupComponet(instance) {
                 handler && handler(...args);
             }
             ,
-            attrs:instance.attrs,
-            slots:instance.slots,
+            attrs: instance.attrs,
+            slots: instance.slots,
         };
         setcurrentInstance(instance);
         const setupResult = setup(instance.props, setupContext);
@@ -123,4 +123,12 @@ export function setupComponet(instance) {
     }
     //由于setup里面也会返回render函数，则下面这一行的代码可能消失
     //instance.render = type.render;
+}
+export function renderComponent(instance) {
+    let { vnode, render, props } = instance;
+    if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+        return render.call(instance.proxy, instance.proxy);
+    } else {
+        return vnode.type(props)
+    }
 }
