@@ -5,4 +5,5 @@ export * from './apiLifecycle';
 export * from './component';
 export * from './apiInject';
 export {TelportImpl as Teleport} from './components/Teleport';
-export * from './defineAsyncComponent'
+export * from './defineAsyncComponent';
+export {KeepAliveImpl as KeepAlive ,isKeepAlive} from'./components/KeepAlive'

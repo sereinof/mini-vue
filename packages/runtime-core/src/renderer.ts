@@ -3,6 +3,7 @@ import { hasOwn, invokeArrayFns, isNumber, isString, PatchFlags, ShapeFlags } fr
 import { patchClass } from "packages/runtime-dom/src/modules/class"
 import { createComponentInstance, renderComponent, setupComponet } from "./component";
 import { hasPropsChanged, initProps, updateProps } from "./componentProps";
+import { isKeepAlive } from "./components/KeepAlive";
 import { queueJob } from "./scheduler";
 import { getSequence } from "./sequence";
 import { createVnode, Fragment, isSameVnode, Text } from "./vnode";
@@ -27,15 +28,15 @@ export function createRenderer(renderOptions) {
         return children[i];
     }
 
-    const mountChildren = (children, container,parentComponet) => {
+    const mountChildren = (children, container, parentComponet) => {
         for (let i = 0; i < children.length; i++) {
             let child = normalize(children, i);//处理后要进行替换，否则children中存放的依旧是那个字符串
-            patch(null, child, container,parentComponet);
+            patch(null, child, container, parentComponet);
         }
     }
 
-    function mountElement(vnode, container, anchor,parentComponet) {
-        
+    function mountElement(vnode, container, anchor, parentComponet) {
+
         let { type, props, children, shapeFlag } = vnode;
         vnode.el = hostCreateElenment(type);//将真实元素挂在到这个虚拟节点上，后续用于复用节点
         let el = vnode.el;
@@ -48,7 +49,7 @@ export function createRenderer(renderOptions) {
         if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {//文本
             hostSetElementText(el, children)
         } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-            mountChildren(children, el,parentComponet);
+            mountChildren(children, el, parentComponet);
         }
         hostInsert(el, container, anchor);
     }
@@ -75,9 +76,9 @@ export function createRenderer(renderOptions) {
 
 
     }
-    const unmountChildren = (children) => {
+    const unmountChildren = (children,parentComponet) => {
         for (let i = 0; i < children.length; i++) {
-            unmount(children[i]);
+            unmount(children[i],parentComponet);
         }
     }
     const patchKeyedChildren = (c1, c2, el) => {//比较两个儿子的差异
@@ -124,7 +125,7 @@ export function createRenderer(renderOptions) {
         } else if (i > e2) {
             if (i <= e1) {
                 while (i <= e1) {
-                    unmount(c1[i]);
+                    unmount(c1[i],null);
                     i++
                 }
             }
@@ -154,7 +155,7 @@ export function createRenderer(renderOptions) {
             let newIndex = keyToNewIndexMap.get(oldChild.key);
             //用老的孩子去新的里面找
             if (newIndex == undefined) {
-                unmount(oldChild);
+                unmount(oldChild,null);
             } else {
                 //新的位置对应的老的位置，如果数组里放的值大于零，说明已经patch过了
                 newIndexToOldIndexMap[newIndex - s2] = i + 1;
@@ -188,7 +189,7 @@ export function createRenderer(renderOptions) {
     }
 
     //下面这个方法名字打错了， 但是可以理解为是一个全量diff算法
-    const patchChildren = (n1, n2, el,parentComponet) => {
+    const patchChildren = (n1, n2, el, parentComponet) => {
         //刚刚说漏了，这里才是最精彩的部分
         const c1 = n1.children;
         const c2 = n2.children;
@@ -198,7 +199,7 @@ export function createRenderer(renderOptions) {
         if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
             if (preShapeFlags & ShapeFlags.ARRAY_CHILDREN) {
                 //  之前是数组节点儿子，现在是文本节点儿子。需要将数组节点全部卸载
-                unmountChildren(c1);
+                unmountChildren(c1,parentComponet);
             }
             if (c1 !== c2) {
                 //进到这里面说明两个儿子都是文本，且文本内容不一样、
@@ -213,77 +214,80 @@ export function createRenderer(renderOptions) {
 
                 } else {
                     //现在不是数组，文本和空
-                    unmountChildren(c1);
+                    unmountChildren(c1,parentComponet);
                 }
             } else {
                 if (preShapeFlags & ShapeFlags.TEXT_CHILDREN) {
                     hostSetElementText(el, '');
                 }
                 if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-                    mountChildren(c2, el,parentComponet);
+                    mountChildren(c2, el, parentComponet);
                 }
             }
 
         }
     }
 
-    const patchBlockChildren = (n1, n2,parentComponet)=>{
+    const patchBlockChildren = (n1, n2, parentComponet) => {
         for (let i = 0; i < n2.dynamicChildren.length; i++) {
-            patchElement(n1.dynamicChildren[i], n2.dynamicChildren[i],parentComponet);
+            patchElement(n1.dynamicChildren[i], n2.dynamicChildren[i], parentComponet);
         }
     }
 
-    const patchElement = (n1, n2,parentComponet) => {
+    const patchElement = (n1, n2, parentComponet) => {
         let el = n2.el = n1.el;//居然进来比对了 当然要复用节点
         let oladProps = n1.props || {};
         let newProps = n2.props || {};
-  
- let {patchFlag} = n2;
- if(patchFlag&PatchFlags.CLASS){
 
-if(oladProps.class!==newProps.class){//对于类名的靶向更新
-    hostPatchprop(el,'class',newProps.class)
-}
-//style。。事件都可以靶向更新 
+        let { patchFlag } = n2;
+        if (patchFlag & PatchFlags.CLASS) {
 
- }else{
-    patchProps(oladProps, newProps, el);//这里不是container而是el，找了好久，幸亏找出了不想computed一样
+            if (oladProps.class !== newProps.class) {//对于类名的靶向更新
+                hostPatchprop(el, 'class', newProps.class)
+            }
+            //style。。事件都可以靶向更新 
 
- }
+        } else {
+            patchProps(oladProps, newProps, el);//这里不是container而是el，找了好久，幸亏找出了不想computed一样
+
+        }
 
         if (n2.dynamicChildren) {
-            
-            patchBlockChildren(n1, n2,parentComponet)
+
+            patchBlockChildren(n1, n2, parentComponet)
         } else {
-            patchChildren(n1, n2, el,parentComponet);
+            patchChildren(n1, n2, el, parentComponet);
         }
 
     }
 
-    const processElement = (n1, n2, container, anchor,parentComponet) => {
+    const processElement = (n1, n2, container, anchor, parentComponet) => {
         if (n1 === null) {
-            mountElement(n2, container, anchor,parentComponet)
+            mountElement(n2, container, anchor, parentComponet)
         } else {
 
             patchElement(n1, n2, container)//这里估计是重头戏里面的重头戏了，就是元素比对
         }
     }
-    const processFragment = (n1, n2, container, anchor,parentComponet) => {
+    const processFragment = (n1, n2, container, anchor, parentComponet) => {
         if (n1 == null) {
-            mountChildren(n2.children, container,parentComponet)
+            mountChildren(n2.children, container, parentComponet)
         } else {
-            patchChildren(n1, n2, container,parentComponet);//走了是两个数组情况的diff算法
+            patchChildren(n1, n2, container, parentComponet);//走了是两个数组情况的diff算法
         }
     }
     const updateComponentPreRender = (instance, next) => {
         instance.next = null;//next清空
         instance.vnode = next;//实例上最新的虚拟节点
         updateProps(instance.props, next.props);
+        
+        Object.assign(instance.slots,next.children)
+         
     }
 
     const setupRenderEffect = (instance, container, anchor) => {
 
-        const { render,vnode } = instance;
+        const { render, vnode } = instance;
         ;
         const componentUpdateFn = () => {//区分是初始化还是更新
             if (!instance.isMounted) {//初始化
@@ -295,12 +299,13 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
                 }
                 const subTree = renderComponent(instance);//不是bind而是call后续this会改？
 
-                patch(null, subTree, container, anchor,instance)
+                patch(null, subTree, container, anchor, instance)
+              
+                instance.subTree = subTree;
+                instance.isMounted = true;
                 if (m) {
                     invokeArrayFns(m);
                 }
-                instance.subTree = subTree;
-                instance.isMounted = true;
 
 
             } else {//组件内部更新
@@ -315,7 +320,7 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
 
                 const subTree = renderComponent(instance);
                 ;
-                patch(instance.subTree, subTree, container, anchor,instance);
+                patch(instance.subTree, subTree, container, anchor, instance);
                 instance.subTree = subTree;
                 if (u) {
                     invokeArrayFns(u);
@@ -331,13 +336,22 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
         update();
     }
 
-    const mountComponent = (vnode, container, anchor,parentComponet) => {
+    const mountComponent = (vnode, container, anchor, parentComponet) => {
 
         //此方法代码十分冗余需要改写
         //1）创建一个实例
         //2）给实例赋值
         //3）创建一个effect
-        let instance = vnode.component = createComponentInstance(vnode,parentComponet);
+        let instance = vnode.component = createComponentInstance(vnode, parentComponet);
+
+        if (isKeepAlive(vnode)) {
+            (instance.ctx as any).renderer = {
+                createElement: hostCreateElenment,//创建元素用这个方法
+                move(vnode, ocntainer) {
+                    hostInsert(vnode.component.subTree.el, container)
+                }
+            }
+        }
 
         //给实例赋值
         setupComponet(instance);
@@ -377,21 +391,21 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
 
     }
 
-    const processCommponent = (n1, n2, container, anchor,parentComponet) => {
+    const processCommponent = (n1, n2, container, anchor, parentComponet) => {
         if (n1 == null) {
-            mountComponent(n2, container, anchor,parentComponet)
+            mountComponent(n2, container, anchor, parentComponet)
         } else {//组件更新靠的是props
             undateComponent(n1, n2,)
         }
     }
 
-    const patch = (n1, n2, container, anchor = null,parentComponet=null) => {//核心的patch方法
-        
+    const patch = (n1, n2, container, anchor = null, parentComponet = null) => {//核心的patch方法
+
         if (n1 === n2) { return };
 
         if (n1 && !isSameVnode(n1, n2)) {//判断两个vnode是否相同，不相同卸载再提交，
 
-            unmount(n1);
+            unmount(n1,parentComponet);
             n1 = null;
         }
 
@@ -399,37 +413,40 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
         //初始化节点
         //后续还有组件的初次渲染，目前是元素的初始化渲染
         ;
-        
+
         switch (type) {
             case Text:
                 processText(n1, n2, container);
                 break;
             case Fragment:
-                processFragment(n1, n2, container, anchor,parentComponet);
+                processFragment(n1, n2, container, anchor, parentComponet);
                 break;
             default:
                 if (shapeFlag & ShapeFlags.ELEMENT) {
-                    processElement(n1, n2, container, anchor,parentComponet);
+                    processElement(n1, n2, container, anchor, parentComponet);
                 } else if (shapeFlag & ShapeFlags.COMPONEBT) {
-                    processCommponent(n1, n2, container, anchor,parentComponet)
-                }else if(shapeFlag& ShapeFlags.TELEPORT){
-                    
-                     type.process(n1, n2, container, anchor,{
+                    processCommponent(n1, n2, container, anchor, parentComponet)
+                } else if (shapeFlag & ShapeFlags.TELEPORT) {
+
+                    type.process(n1, n2, container, anchor, {
                         mountChildren,
                         patchChildren,
-                        move(vnode,container,anchor){
-                            hostInsert(vnode.component? vnode.component.subTree.el:vnode.el,container,anchor);
+                        move(vnode, container, anchor) {
+                            hostInsert(vnode.component ? vnode.component.subTree.el : vnode.el, container, anchor);
                         }
-                     });
+                    });
                 }
         }
 
     }
-    const unmount = (vnode) => {
-        if(vnode.type==Fragment){
-            return unmountChildren(vnode)
-        }else if(vnode.shapeFlag &ShapeFlags.COMPONEBT){
-            return unmount(vnode.component.subTree)
+    const unmount = (vnode,parentComponet) => {
+        if (vnode.type == Fragment) {
+            return unmountChildren(vnode,parentComponet)
+        } else if(vnode.shapeFlag &ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE){
+     parentComponet.ctx.deactivate(vnode);
+        }
+        else if (vnode.shapeFlag & ShapeFlags.COMPONEBT) {
+            return unmount(vnode.component.subTree,parentComponet)
         }
         hostRemove(vnode.el);
     }
@@ -440,12 +457,12 @@ if(oladProps.class!==newProps.class){//对于类名的靶向更新
         if (vnode == null) {
             //卸载逻辑
             if (container._vnode) {
-                unmount(container._vnode)
+                unmount(container._vnode,null)
             }
 
         } else {
             //这里既有初始化的逻辑，也有更新的逻辑
-   
+
             patch(container._vnode || null, vnode, container)//这一行有点不懂，难道是默认这个container
             //只挂载一个虚拟节点吗？
         }
